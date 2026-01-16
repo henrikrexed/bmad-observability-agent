@@ -1,0 +1,1187 @@
+  # ═══════════════════════════════════════════════════════
+  # PART 4: INSTRUMENTATION & COLLECTOR PROMPTS
+  # ═══════════════════════════════════════════════════════
+
+  - id: adjust-instrumentation
+    content: |
+      Configure OpenTelemetry SDK instrumentation for application with proper settings.
+      
+      ## Step 1: Identify Application Stack
+      
+      Determine:
+      - Programming language (Go, Python, Java, Node.js, .NET, Ruby, PHP)
+      - Framework (Spring Boot, Django, Express, ASP.NET, Rails, Laravel)
+      - Deployment environment (K8s, Docker, VM, serverless)
+      - Existing instrumentation (if any)
+      
+      ## Step 2: Choose Instrumentation Method
+      
+      ### Auto-Instrumentation (Recommended for most cases)
+      
+      **When to use:**
+      - Starting fresh
+      - Standard frameworks (Spring Boot, Django, Express)
+      - Kubernetes deployment
+      - Want zero code changes
+      
+      **Options:**
+      - **Kubernetes Operator** - Best for K8s
+      - **eBPF** - Zero code change, works for compiled languages
+      - **Language agents** - Bytecode injection (Java, .NET, Python, Node.js)
+      
+      ### Manual Instrumentation
+      
+      **When to use:**
+      - Custom business logic needs instrumentation
+      - Fine-grained control required
+      - Performance-critical paths
+      - Non-standard frameworks
+      
+      ## Step 3: Configure Required Attributes
+      
+      ### Resource Attributes (REQUIRED)
+      
+      These identify the service:
+````yaml
+      # Environment variables (works for all languages)
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: "payment-service"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.version=1.2.3,deployment.environment=production,service.namespace=ecommerce"
+````
+      
+      **Required attributes:**
+      - `service.name` - Service identifier
+      - `service.version` - Version (for deployment tracking)
+      - `deployment.environment` - Environment (dev, staging, prod)
+      
+      **Recommended attributes:**
+      - `service.namespace` - Logical grouping (e.g., team, product)
+      - `service.instance.id` - Unique instance identifier
+      
+      ## Step 4: Configure Exporter
+      
+      Point to OpenTelemetry Collector:
+````yaml
+      env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otelcol:4317"  # gRPC
+        # OR
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otelcol:4318"  # HTTP
+        
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "grpc"  # or "http/protobuf"
+````
+      
+      ## Step 5: Enable Trace Context in Logs
+      
+      ### Go (with logrus)
+````go
+      package main
+      
+      import (
+          "context"
+          "github.com/sirupsen/logrus"
+          "go.opentelemetry.io/otel"
+          "go.opentelemetry.io/otel/trace"
+      )
+      
+      func setupLogging() {
+          logrus.SetFormatter(&logrus.JSONFormatter{
+              FieldMap: logrus.FieldMap{
+                  logrus.FieldKeyTime:  "timestamp",
+                  logrus.FieldKeyLevel: "severity",
+                  logrus.FieldKeyMsg:   "message",
+              },
+          })
+      }
+      
+      func logWithTrace(ctx context.Context, msg string) {
+          span := trace.SpanFromContext(ctx)
+          spanContext := span.SpanContext()
+          
+          logrus.WithFields(logrus.Fields{
+              "trace_id": spanContext.TraceID().String(),
+              "span_id":  spanContext.SpanID().String(),
+              "trace_flags": spanContext.TraceFlags().String(),
+          }).Info(msg)
+      }
+      
+      // Usage
+      func handleRequest(ctx context.Context) {
+          logWithTrace(ctx, "Processing payment request")
+      }
+````
+      
+      ### Python (with structlog)
+````python
+      import logging
+      import structlog
+      from opentelemetry import trace
+      from opentelemetry.instrumentation.logging import LoggingInstrumentor
+      
+      # Auto-inject trace context
+      LoggingInstrumentor().instrument(set_logging_format=True)
+      
+      # Configure structlog
+      structlog.configure(
+          processors=[
+              structlog.stdlib.add_log_level,
+              structlog.stdlib.add_logger_name,
+              structlog.processors.TimeStamper(fmt="iso"),
+              structlog.processors.StackInfoRenderer(),
+              structlog.processors.format_exc_info,
+              structlog.processors.JSONRenderer()
+          ],
+          wrapper_class=structlog.stdlib.BoundLogger,
+          context_class=dict,
+          logger_factory=structlog.stdlib.LoggerFactory(),
+      )
+      
+      logger = structlog.get_logger()
+      
+      # Trace context automatically added to logs
+      logger.info("processing_payment", user_id="123", amount=99.99)
+      # Output: {"event": "processing_payment", "trace_id": "abc...", "span_id": "def...", ...}
+````
+      
+      ### Java (Spring Boot with Logback)
+````xml
+      <!-- logback-spring.xml -->
+      <configuration>
+          <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+              <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                  <includeMdcKeyName>trace_id</includeMdcKeyName>
+                  <includeMdcKeyName>span_id</includeMdcKeyName>
+                  <includeMdcKeyName>trace_flags</includeMdcKeyName>
+              </encoder>
+          </appender>
+          
+          <root level="INFO">
+              <appender-ref ref="JSON"/>
+          </root>
+      </configuration>
+````
+````properties
+      # application.properties
+      logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %msg trace_id=%X{trace_id} span_id=%X{span_id}%n
+````
+      
+      ### Node.js (with Winston)
+````javascript
+      const winston = require('winston');
+      const { trace } = require('@opentelemetry/api');
+      
+      const logger = winston.createLogger({
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.printf(info => {
+            const span = trace.getActiveSpan();
+            const spanContext = span?.spanContext();
+            
+            return JSON.stringify({
+              timestamp: info.timestamp,
+              level: info.level,
+              message: info.message,
+              trace_id: spanContext?.traceId || '',
+              span_id: spanContext?.spanId || '',
+              ...info
+            });
+          })
+        ),
+        transports: [new winston.transports.Console()]
+      });
+      
+      // Usage
+      logger.info('Processing payment', { user_id: '123', amount: 99.99 });
+````
+      
+      ## Step 6: Configure Sampling
+      
+      ### Head-Based Sampling (Simple)
+````yaml
+      env:
+        - name: OTEL_TRACES_SAMPLER
+          value: "traceidratio"
+        - name: OTEL_TRACES_SAMPLER_ARG
+          value: "0.1"  # 10% sampling
+````
+      
+      ### Parent-Based Sampling (Better)
+````yaml
+      env:
+        - name: OTEL_TRACES_SAMPLER
+          value: "parentbased_traceidratio"
+        - name: OTEL_TRACES_SAMPLER_ARG
+          value: "0.1"  # 10% sampling, but always follows parent decision
+````
+      
+      **Note:** For production, use tail-based sampling in collector instead
+      
+      ## Step 7: Enable Exemplars (Metrics → Traces)
+      
+      ### Go
+````go
+      import (
+          "go.opentelemetry.io/otel/sdk/metric"
+      )
+      
+      func setupMetrics() *metric.MeterProvider {
+          return metric.NewMeterProvider(
+              metric.WithReader(
+                  metric.NewPeriodicReader(exporter),
+              ),
+              // Exemplars automatically enabled for histograms
+          )
+      }
+````
+      
+      ### Python
+````python
+      from opentelemetry.sdk.metrics import MeterProvider
+      from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+      
+      # Exemplars automatically enabled
+      meter_provider = MeterProvider(
+          metric_readers=[
+              PeriodicExportingMetricReader(exporter)
+          ]
+      )
+````
+      
+      ## Complete Configuration Examples
+      
+      ### Kubernetes Operator (Auto-Instrumentation)
+````yaml
+      # 1. Create Instrumentation resource
+      apiVersion: opentelemetry.io/v1alpha1
+      kind: Instrumentation
+      metadata:
+        name: app-instrumentation
+        namespace: default
+      spec:
+        exporter:
+          endpoint: http://otelcol.observability.svc.cluster.local:4317
+        propagators:
+          - tracecontext
+          - baggage
+        sampler:
+          type: parentbased_traceidratio
+          argument: "0.1"
+        
+        # Java auto-instrumentation
+        java:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
+          env:
+            - name: OTEL_JAVAAGENT_LOGGING
+              value: "application"
+        
+        # Python auto-instrumentation
+        python:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:latest
+        
+        # Node.js auto-instrumentation
+        nodejs:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:latest
+        
+        # .NET auto-instrumentation
+        dotnet:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-dotnet:latest
+        
+        # Go - requires manual SDK (no auto-instrumentation yet)
+        go:
+          image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:latest
+      
+      ---
+      # 2. Annotate deployment
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: payment-service
+      spec:
+        template:
+          metadata:
+            annotations:
+              instrumentation.opentelemetry.io/inject-java: "true"
+              # OR for Python: instrumentation.opentelemetry.io/inject-python: "true"
+              # OR for Node.js: instrumentation.opentelemetry.io/inject-nodejs: "true"
+              # OR for .NET: instrumentation.opentelemetry.io/inject-dotnet: "true"
+          spec:
+            containers:
+            - name: app
+              image: myapp:latest
+              env:
+                - name: OTEL_SERVICE_NAME
+                  value: "payment-service"
+                - name: OTEL_RESOURCE_ATTRIBUTES
+                  value: "service.version=1.2.3,deployment.environment=production"
+````
+      
+      ### Manual SDK - Go Example
+````go
+      package main
+      
+      import (
+          "context"
+          "log"
+          
+          "go.opentelemetry.io/otel"
+          "go.opentelemetry.io/otel/attribute"
+          "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+          "go.opentelemetry.io/otel/propagation"
+          "go.opentelemetry.io/otel/sdk/resource"
+          sdktrace "go.opentelemetry.io/otel/sdk/trace"
+          semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+      )
+      
+      func initTracer() func() {
+          ctx := context.Background()
+          
+          // Configure exporter
+          exporter, err := otlptracegrpc.New(ctx,
+              otlptracegrpc.WithEndpoint("otelcol:4317"),
+              otlptracegrpc.WithInsecure(),
+          )
+          if err != nil {
+              log.Fatal(err)
+          }
+          
+          // Configure resource
+          res, err := resource.New(ctx,
+              resource.WithAttributes(
+                  semconv.ServiceName("payment-service"),
+                  semconv.ServiceVersion("1.2.3"),
+                  semconv.DeploymentEnvironment("production"),
+                  attribute.String("service.namespace", "ecommerce"),
+              ),
+          )
+          if err != nil {
+              log.Fatal(err)
+          }
+          
+          // Configure tracer provider
+          tp := sdktrace.NewTracerProvider(
+              sdktrace.WithBatcher(exporter),
+              sdktrace.WithResource(res),
+              sdktrace.WithSampler(sdktrace.ParentBased(
+                  sdktrace.TraceIDRatioBased(0.1), // 10% sampling
+              )),
+          )
+          
+          otel.SetTracerProvider(tp)
+          otel.SetTextMapPropagator(
+              propagation.NewCompositeTextMapPropagator(
+                  propagation.TraceContext{},
+                  propagation.Baggage{},
+              ),
+          )
+          
+          return func() {
+              _ = tp.Shutdown(ctx)
+          }
+      }
+      
+      func main() {
+          shutdown := initTracer()
+          defer shutdown()
+          
+          // Your application code
+      }
+````
+      
+      ### Manual SDK - Python Example
+````python
+      from opentelemetry import trace
+      from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+      from opentelemetry.sdk.trace import TracerProvider
+      from opentelemetry.sdk.trace.export import BatchSpanProcessor
+      from opentelemetry.sdk.resources import Resource
+      from opentelemetry.semconv.resource import ResourceAttributes
+      
+      def init_tracer():
+          # Configure resource
+          resource = Resource.create({
+              ResourceAttributes.SERVICE_NAME: "payment-service",
+              ResourceAttributes.SERVICE_VERSION: "1.2.3",
+              ResourceAttributes.DEPLOYMENT_ENVIRONMENT: "production",
+              "service.namespace": "ecommerce",
+          })
+          
+          # Configure tracer provider
+          provider = TracerProvider(resource=resource)
+          
+          # Configure exporter
+          otlp_exporter = OTLPSpanExporter(
+              endpoint="http://otelcol:4317",
+              insecure=True,
+          )
+          
+          # Add batch processor
+          provider.add_span_processor(
+              BatchSpanProcessor(otlp_exporter)
+          )
+          
+          # Set as global
+          trace.set_tracer_provider(provider)
+      
+      if __name__ == "__main__":
+          init_tracer()
+          # Your application code
+````
+      
+      ## Step 8: Validation
+      
+      After configuration, validate instrumentation:
+````bash
+      # 1. Check traces are being sent
+      kubectl logs -l app=payment-service | grep -i "trace\|span"
+      
+      # 2. Check collector is receiving
+      kubectl logs -l app=otelcol | grep "TracesReceived"
+      
+      # 3. Verify in backend (Dynatrace, Jaeger, etc.)
+      # - Check for service appearing
+      # - Verify spans have correct attributes
+      # - Check trace context in logs
+      
+      # 4. Run instrumentation score
+      # Execute: *score-instrumentation
+      # Target: 85+ for production
+````
+      
+      ## Step 9: Production Checklist
+      
+      Before deploying to production:
+      
+      - [ ] Required resource attributes set (service.name, service.version, deployment.environment)
+      - [ ] Trace context in logs enabled
+      - [ ] Sampling configured (not 100%)
+      - [ ] Exporter pointing to collector (not directly to backend)
+      - [ ] Health checks configured
+      - [ ] Instrumentation score ≥ 85
+      - [ ] Tested in staging
+      - [ ] Rollback plan ready
+      
+      Generate complete instrumentation configuration for the user's stack.
+
+  - id: auto-instrumentation
+    content: |
+      Generate auto-instrumentation configuration (zero code changes).
+      
+      ## Method 1: Kubernetes Operator (Recommended)
+      
+      ### Step 1: Install Cert Manager (if not already installed)
+````bash
+      kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+      
+      # Wait for cert-manager to be ready
+      kubectl wait --for=condition=Available --timeout=300s \
+        deployment/cert-manager -n cert-manager
+````
+      
+      ### Step 2: Install OpenTelemetry Operator
+````bash
+      kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+      
+      # Verify installation
+      kubectl get deployment -n opentelemetry-operator-system
+````
+      
+      ### Step 3: Create Instrumentation Resource
+````yaml
+      apiVersion: opentelemetry.io/v1alpha1
+      kind: Instrumentation
+      metadata:
+        name: app-instrumentation
+        namespace: default
+      spec:
+        exporter:
+          endpoint: http://otelcol.observability.svc.cluster.local:4317
+        
+        propagators:
+          - tracecontext
+          - baggage
+        
+        sampler:
+          type: parentbased_traceidratio
+          argument: "0.1"  # 10% sampling
+        
+        # Java instrumentation
+        java:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
+          env:
+            # Reduce noise in logs
+            - name: OTEL_JAVAAGENT_LOGGING
+              value: "application"
+            # Additional JVM options if needed
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+        
+        # Python instrumentation
+        python:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:latest
+          env:
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+              value: "true"
+        
+        # Node.js instrumentation
+        nodejs:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:latest
+          env:
+            - name: OTEL_NODEJS_DEBUG
+              value: "false"
+        
+        # .NET instrumentation
+        dotnet:
+          image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-dotnet:latest
+          env:
+            - name: OTEL_DOTNET_AUTO_LOGS_INCLUDE_FORMATTED_MESSAGE
+              value: "true"
+````
+      
+      ### Step 4: Annotate Your Deployment
+````yaml
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: payment-service
+        namespace: default
+      spec:
+        replicas: 3
+        selector:
+          matchLabels:
+            app: payment-service
+        template:
+          metadata:
+            labels:
+              app: payment-service
+            annotations:
+              # Choose one based on your language:
+              instrumentation.opentelemetry.io/inject-java: "true"
+              # instrumentation.opentelemetry.io/inject-python: "true"
+              # instrumentation.opentelemetry.io/inject-nodejs: "true"
+              # instrumentation.opentelemetry.io/inject-dotnet: "true"
+          spec:
+            containers:
+            - name: app
+              image: myregistry/payment-service:1.2.3
+              ports:
+              - containerPort: 8080
+              env:
+                # Required resource attributes
+                - name: OTEL_SERVICE_NAME
+                  value: "payment-service"
+                - name: OTEL_RESOURCE_ATTRIBUTES
+                  value: "service.version=1.2.3,deployment.environment=production,service.namespace=ecommerce"
+````
+      
+      ### Step 5: Deploy and Verify
+````bash
+      # Apply the deployment
+      kubectl apply -f payment-service-deployment.yaml
+      
+      # Check if instrumentation was injected
+      kubectl get pod -l app=payment-service -o yaml | grep -A 5 "OTEL"
+      
+      # Check application logs for OTel initialization
+      kubectl logs -l app=payment-service | grep -i "opentelemetry\|otel"
+      
+      # Expected output:
+      # [otel.javaagent] OpenTelemetry Javaagent started
+      # [otel.javaagent] Exporting to http://otelcol:4317
+````
+      
+      ## Method 2: eBPF-Based Auto-Instrumentation
+      
+      ### Option A: Beyla (by Grafana)
+      
+      **Supports:** Go, Rust, C/C++, Java, .NET, Node.js, Python, Ruby
+````yaml
+      apiVersion: apps/v1
+      kind: DaemonSet
+      metadata:
+        name: beyla
+        namespace: observability
+      spec:
+        selector:
+          matchLabels:
+            app: beyla
+        template:
+          metadata:
+            labels:
+              app: beyla
+          spec:
+            hostPID: true  # Required for eBPF
+            containers:
+            - name: beyla
+              image: grafana/beyla:latest
+              securityContext:
+                privileged: true  # Required for eBPF
+              env:
+                - name: BEYLA_OPEN_PORT
+                  value: "8080,443"  # Ports to instrument
+                - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                  value: "http://otelcol:4317"
+                - name: OTEL_SERVICE_NAME
+                  value: "auto-discovered"  # Or set specific name
+              volumeMounts:
+              - name: sys
+                mountPath: /sys
+                readOnly: true
+            volumes:
+            - name: sys
+              hostPath:
+                path: /sys
+````
+      
+      ### Option B: Odigos
+      
+      **Supports:** Go, Java, Python, .NET, Node.js
+````bash
+      # Install Odigos via Helm
+      helm repo add odigos https://keyval-dev.github.io/odigos-charts/
+      helm install odigos odigos/odigos --namespace odigos-system --create-namespace
+      
+      # Install Odigos CLI
+      brew install keyval-dev/homebrew-odigos-cli/odigos
+      
+      # Configure Odigos
+      odigos install
+      
+      # Add instrumentation to namespace
+      odigos instrument namespace default
+      
+      # Configure destination (OTel Collector)
+      odigos destination add otlp-collector \
+        --type otlp \
+        --endpoint http://otelcol.observability:4317
+````
+      
+      ## Method 3: Language-Specific Agents
+      
+      ### Java (No code changes)
+````dockerfile
+      FROM openjdk:17-slim
+      
+      # Download OpenTelemetry Java agent
+      ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /opt/
+      
+      COPY target/myapp.jar /app.jar
+      
+      # Add agent to JVM
+      ENV JAVA_TOOL_OPTIONS="-javaagent:/opt/opentelemetry-javaagent.jar"
+      ENV OTEL_SERVICE_NAME="payment-service"
+      ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://otelcol:4317"
+      ENV OTEL_RESOURCE_ATTRIBUTES="service.version=1.2.3,deployment.environment=production"
+      
+      ENTRYPOINT ["java", "-jar", "/app.jar"]
+````
+      
+      ### Python (via opentelemetry-instrument)
+````dockerfile
+      FROM python:3.11-slim
+      
+      WORKDIR /app
+      
+      # Install dependencies
+      COPY requirements.txt .
+      RUN pip install -r requirements.txt
+      
+      # Install OpenTelemetry auto-instrumentation
+      RUN pip install opentelemetry-distro opentelemetry-exporter-otlp
+      RUN opentelemetry-bootstrap -a install
+      
+      COPY . .
+      
+      ENV OTEL_SERVICE_NAME="payment-service"
+      ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://otelcol:4317"
+      ENV OTEL_RESOURCE_ATTRIBUTES="service.version=1.2.3,deployment.environment=production"
+      
+      # Run with auto-instrumentation
+      CMD ["opentelemetry-instrument", "python", "app.py"]
+````
+      
+      ### Node.js (via require hook)
+````dockerfile
+      FROM node:18-slim
+      
+      WORKDIR /app
+      
+      # Install dependencies
+      COPY package*.json ./
+      RUN npm install
+      
+      # Install OpenTelemetry packages
+      RUN npm install --save @opentelemetry/api \
+                            @opentelemetry/auto-instrumentations-node \
+                            @opentelemetry/exporter-trace-otlp-grpc
+      
+      COPY . .
+      
+      ENV OTEL_SERVICE_NAME="payment-service"
+      ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://otelcol:4317"
+      ENV OTEL_RESOURCE_ATTRIBUTES="service.version=1.2.3,deployment.environment=production"
+      
+      # Auto-instrument via NODE_OPTIONS
+      ENV NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register"
+      
+      CMD ["node", "app.js"]
+````
+      
+      ### .NET (via startup hook)
+````dockerfile
+      FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS runtime
+      
+      WORKDIR /app
+      
+      # Install OpenTelemetry auto-instrumentation
+      RUN apt-get update && apt-get install -y wget unzip
+      RUN wget https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/latest/download/otel-dotnet-auto-install.sh
+      RUN sh ./otel-dotnet-auto-install.sh
+      
+      COPY --from=build /app/publish .
+      
+      ENV OTEL_SERVICE_NAME="payment-service"
+      ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://otelcol:4317"
+      ENV OTEL_RESOURCE_ATTRIBUTES="service.version=1.2.3,deployment.environment=production"
+      ENV OTEL_DOTNET_AUTO_HOME="/otel-dotnet-auto"
+      ENV DOTNET_STARTUP_HOOKS="/otel-dotnet-auto/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll"
+      
+      ENTRYPOINT ["dotnet", "MyApp.dll"]
+````
+      
+      ## Validation Steps
+      
+      After enabling auto-instrumentation:
+````bash
+      # 1. Check pods are running
+      kubectl get pods -l app=payment-service
+      
+      # 2. Check for OTel environment variables
+      kubectl exec -it <pod-name> -- env | grep OTEL
+      
+      # 3. Check application logs for OTel initialization
+      kubectl logs <pod-name> | grep -i "opentelemetry\|instrumentation"
+      
+      # Expected:
+      # - "OpenTelemetry auto-instrumentation enabled"
+      # - "Exporting to http://otelcol:4317"
+      # - No errors about missing dependencies
+      
+      # 4. Check collector is receiving data
+      kubectl logs -l app=otelcol -n observability | grep "TracesReceived"
+      
+      # 5. Verify in backend
+      # - Service should appear in service list
+      # - Traces should have proper attributes
+      # - HTTP/DB calls should be instrumented
+````
+      
+      ## Troubleshooting
+      
+      ### Issue: No traces appearing
+      
+      **Check:**
+````bash
+      # Is instrumentation annotation correct?
+      kubectl get pod <pod-name> -o yaml | grep "instrumentation.opentelemetry.io"
+      
+      # Are OTel containers injected?
+      kubectl get pod <pod-name> -o yaml | grep -A 10 "initContainers"
+      
+      # Is operator running?
+      kubectl get pods -n opentelemetry-operator-system
+      
+      # Check operator logs
+      kubectl logs -n opentelemetry-operator-system -l app.kubernetes.io/name=opentelemetry-operator
+````
+      
+      ### Issue: Application failing to start
+      
+      **Check:**
+````bash
+      # Check application logs
+      kubectl logs <pod-name>
+      
+      # Common issues:
+      # - OOM (increase memory limits)
+      # - Incompatible Java version
+      # - Missing dependencies
+      
+      # Temporarily disable instrumentation to verify
+      kubectl annotate deployment payment-service instrumentation.opentelemetry.io/inject-java-
+````
+      
+      ### Issue: High overhead / performance impact
+      
+      **Fix:**
+````yaml
+      # Reduce sampling rate
+      spec:
+        sampler:
+          type: parentbased_traceidratio
+          argument: "0.01"  # 1% instead of 10%
+      
+      # Or disable specific instrumentations
+      env:
+        - name: OTEL_INSTRUMENTATION_JDBC_ENABLED
+          value: "false"  # Disable JDBC instrumentation
+````
+      
+      ## Comparison Matrix
+      
+      | Method | Pros | Cons | Best For |
+      |--------|------|------|----------|
+      | **K8s Operator** | Easy, declarative, supports multiple languages | Requires K8s, some overhead | Most K8s deployments |
+      | **eBPF (Beyla)** | Zero code change, works for compiled languages | Linux only, limited customization | Go, Rust, C/C++ apps |
+      | **eBPF (Odigos)** | Automatic detection, easy setup | Commercial features, learning curve | Multi-language environments |
+      | **Language Agents** | Works anywhere, full control | Requires Dockerfile changes | Non-K8s deployments |
+      
+      Generate complete auto-instrumentation configuration for user's environment.
+
+  - id: instrumentation-score
+    content: |
+      Calculate observability instrumentation quality score (0-100) and provide improvement roadmap.
+      
+      ## Scoring Framework
+      
+      Total: 100 points across 6 categories
+      
+      ### Category 1: Signal Coverage (30 points)
+      
+      **Traces (10 points):**
+      - ✅ HTTP requests instrumented (3 pts)
+      - ✅ Database calls instrumented (3 pts)
+      - ✅ External API calls instrumented (2 pts)
+      - ✅ Async operations instrumented (2 pts)
+      
+      **Metrics (10 points):**
+      - ✅ Request count/rate (3 pts)
+      - ✅ Request duration (histogram) (3 pts)
+      - ✅ Error count/rate (2 pts)
+      - ✅ Custom business metrics (2 pts)
+      
+      **Logs (5 points):**
+      - ✅ Structured logging (3 pts)
+      - ✅ Appropriate log levels (2 pts)
+      
+      **Profiling (5 points):**
+      - ✅ Continuous profiling enabled (5 pts)
+      - Optional but highly recommended
+      
+      ### Category 2: Signal Correlation (25 points)
+      
+      **Trace Context in Logs (10 points):**
+      - ✅ trace_id in logs (5 pts)
+      - ✅ span_id in logs (3 pts)
+      - ✅ service.name in logs (2 pts)
+      
+      **Exemplars (5 points):**
+      - ✅ Exemplars enabled on metrics (5 pts)
+      - Links metrics → traces
+      
+      **Resource Attributes (5 points):**
+      - ✅ Consistent across all signals (5 pts)
+      - service.name, service.version, deployment.environment
+      
+      **Span Links (5 points):**
+      - ✅ Links for async operations (3 pts)
+      - ✅ Links for batch processing (2 pts)
+      
+      ### Category 3: Semantic Conventions (20 points)
+      
+      **HTTP Semantic Conventions (5 points):**
+      - ✅ http.method (required) (2 pts)
+      - ✅ http.status_code (required) (2 pts)
+      - ✅ http.route (recommended) (1 pt)
+      
+      **Database Semantic Conventions (5 points):**
+      - ✅ db.system (required) (2 pts)
+      - ✅ db.statement (required) (2 pts)
+      - ✅ db.name (recommended) (1 pt)
+      
+      **Messaging Semantic Conventions (5 points):**
+      - ✅ messaging.system (required) (2 pts)
+      - ✅ messaging.operation (required) (2 pts)
+      - ✅ messaging.destination (recommended) (1 pt)
+      
+      **RPC Semantic Conventions (5 points):**
+      - ✅ rpc.system (required) (2 pts)
+      - ✅ rpc.service (required) (2 pts)
+      - ✅ rpc.method (recommended) (1 pt)
+      
+      ### Category 4: Sampling Strategy (10 points)
+      
+      **Configured (5 points):**
+      - ✅ Sampling configured (not 100%) (5 pts)
+      - ❌ No sampling (0 pts)
+      
+      **Documented (3 points):**
+      - ✅ Strategy documented (3 pts)
+      - What gets sampled and why
+      
+      **Error Capture (2 points):**
+      - ✅ 100% of errors sampled (2 pts)
+      - ❌ Errors dropped by sampling (0 pts)
+      
+      ### Category 5: Cardinality Management (10 points)
+      
+      **Unbounded Attributes Identified (3 points):**
+      - ✅ All unbounded attributes identified (3 pts)
+      - user_id, trace_id, timestamps in metrics
+      
+      **Drop Rules (4 points):**
+      - ✅ Drop rules for high-cardinality attributes (4 pts)
+      - ❌ No drop rules (0 pts)
+      
+      **Monitoring (3 points):**
+      - ✅ Cardinality monitored (3 pts)
+      - Alerts for cardinality spikes
+      
+      ### Category 6: Production Readiness (5 points)
+      
+      **Health Checks (2 points):**
+      - ✅ Liveness probe (1 pt)
+      - ✅ Readiness probe (1 pt)
+      
+      **High Availability (2 points):**
+      - ✅ Multiple replicas (2 pts)
+      - ❌ Single replica (0 pts)
+      
+      **Alerting (1 point):**
+      - ✅ Alerts for instrumentation failures (1 pt)
+      
+      ## Scoring Execution
+      
+      Analyze the service and calculate score:
+````bash
+      # 1. Check for traces
+      # Query backend for service traces
+      # Verify HTTP, DB, external calls are captured
+      
+      # 2. Check for metrics
+      # Verify RED metrics exist (Rate, Errors, Duration)
+      
+      # 3. Check logs
+      # Sample logs and verify trace_id presence
+      
+      # 4. Check semantic conventions
+      # Validate attribute names against spec
+      
+      # 5. Check sampling
+      # Review configuration
+      
+      # 6. Check cardinality
+      # Count unique metric series
+````
+      
+      ## Score Report Format
+````markdown
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      INSTRUMENTATION QUALITY SCORE
+      Service: payment-service
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      Overall Score: 78/100 ⚠️  GOOD
+      Grade: B (70-89)
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      CATEGORY BREAKDOWN
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      1. Signal Coverage         26/30  ██████████████████░░ 87%
+      2. Signal Correlation      18/25  ██████████████░░░░░░ 72%
+      3. Semantic Conventions    15/20  ███████████████░░░░░ 75%
+      4. Sampling Strategy        8/10  ████████████████░░░░ 80%
+      5. Cardinality Mgmt         7/10  ██████████████░░░░░░ 70%
+      6. Production Readiness     4/5   ████████████████░░░░ 80%
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      DETAILED RESULTS
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      ✅ STRENGTHS (15 items):
+      
+      Signal Coverage:
+        ✓ HTTP requests instrumented (3/3)
+        ✓ Database calls instrumented (3/3)
+        ✓ External API calls instrumented (2/2)
+        ✓ Request metrics (rate, duration, errors) (8/8)
+        ✓ Structured logging (3/3)
+      
+      Signal Correlation:
+        ✓ trace_id in logs (5/5)
+        ✓ span_id in logs (3/3)
+        ✓ Resource attributes consistent (5/5)
+      
+      Semantic Conventions:
+        ✓ HTTP conventions (http.method, http.status_code) (4/5)
+        ✓ Database conventions (db.system, db.statement) (4/5)
+      
+      Sampling:
+        ✓ Sampling configured (10% head-based) (5/5)
+        ✓ Errors captured 100% (2/2)
+      
+      Production:
+        ✓ Health checks configured (2/2)
+        ✓ HA deployment (3 replicas) (2/2)
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      ⚠️  GAPS TO ADDRESS (8 items):
+      
+      [CRITICAL] Missing continuous profiling (0/5) 🚨
+        Impact: Cannot debug CPU/memory issues
+        Fix: Enable continuous profiling
+        Effort: 1 day
+        Priority: HIGH
+      
+      [HIGH] Exemplars not enabled (0/5)
+        Impact: Cannot jump from metrics to traces
+        Fix: Enable exemplars in SDK configuration
+        Code:
+```go
+        // Add to metrics configuration
+        metric.WithView(
+            metric.NewView(
+                metric.Instrument{Kind: metric.InstrumentKindHistogram},
+                metric.Stream{Aggregation: ...},
+            ),
+        )
+```
+        Effort: 2 hours
+        Priority: HIGH
+      
+      [HIGH] Missing http.route (0/1)
+        Impact: Cannot track performance by endpoint
+        Current: Using full path (/api/users/12345)
+        Fix: Use route template (/api/users/{id})
+        Code:
+```go
+        span.SetAttributes(
+            semconv.HTTPRoute("/api/users/{id}"),  // Add this
+        )
+```
+        Effort: 4 hours
+        Priority: HIGH
+      
+      [MEDIUM] Custom business metrics missing (0/2)
+        Impact: Missing domain-specific insights
+        Recommended:
+        - Payment transaction amount
+        - Conversion rate
+        - Cart abandonment rate
+        Effort: 1 day
+        Priority: MEDIUM
+      
+      [MEDIUM] Async operations not linked (0/3)
+        Impact: Broken distributed traces for async flows
+        Fix: Add span links for async operations
+        Code:
+```go
+        // When starting async operation
+        spanContext := span.SpanContext()
+        
+        // In async worker
+        link := trace.Link{
+            SpanContext: spanContext,
+        }
+        _, span := tracer.Start(ctx, "async-work",
+            trace.WithLinks(link),
+        )
+```
+        Effort: 1 day
+        Priority: MEDIUM
+      
+      [MEDIUM] Cardinality not monitored (0/3)
+        Impact: Surprise cost spikes
+        Fix: Add cardinality monitoring and alerts
+        Effort: 1 day
+        Priority: MEDIUM
+      
+      [LOW] Sampling strategy not documented (0/3)
+        Impact: Team doesn't understand what's sampled
+        Fix: Document in README:
+        - What: 10% head-based sampling
+        - Why: Balance cost with coverage
+        - Exceptions: 100% errors
+        Effort: 1 hour
+        Priority: LOW
+      
+      [LOW] service.name not in logs (0/2)
+        Impact: Minor - harder to filter logs
+        Fix: Add to log configuration
+        Effort: 1 hour
+        Priority: LOW
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      SCORE INTERPRETATION
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      90-100: Excellent - Production ready
+      80-89:  Good - Minor improvements recommended
+      70-79:  Fair - Several gaps to address
+      60-69:  Poor - Significant work needed
+      <60:    Failing - Major instrumentation gaps
+      
+      Current: 78/100 (Good - B grade)
+      
+      Your instrumentation is solid with good coverage of the basics.
+      The main gaps are:
+      - Missing profiling (critical for production debugging)
+      - No exemplars (limits correlation capabilities)
+      - Some semantic convention gaps (http.route)
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      ROADMAP TO 90+ (EXCELLENT)
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      Week 1 - Critical Fixes (Reach 85+):
+      - [ ] Enable continuous profiling (+5 pts)
+      - [ ] Enable exemplars (+5 pts)
+      - [ ] Add http.route to all HTTP spans (+1 pt)
+      - [ ] Add custom business metrics (+2 pts)
+      
+      Projected Score: 91/100 (Excellent - A grade)
+      
+      Week 2 - Nice to Have (Reach 95+):
+      - [ ] Add span links for async operations (+3 pts)
+      - [ ] Set up cardinality monitoring (+3 pts)
+      - [ ] Document sampling strategy (+3 pts)
+      - [ ] Add service.name to logs (+2 pts)
+      
+      Projected Score: 102/100 → Capped at 100 (A+ grade)
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      QUICK WINS (< 1 day effort, high impact)
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      1. Enable exemplars (2 hours, +5 pts)
+      2. Add http.route (4 hours, +1 pt)
+      3. Document sampling (1 hour, +3 pts)
+      4. Add service.name to logs (1 hour, +2 pts)
+      
+      Total: 1 day effort, +11 points → Score: 89/100
+      
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+````
+      
+      After showing the report, ask:
+````
+      Would you like help fixing these gaps?
+      
+      I can provide:
+      1. Code examples for enabling profiling
+      2. Configuration for exemplars
+      3. Guidance on adding http.route
+      4. Custom business metrics instrumentation
+      
+      Which would you like to tackle first?
+````
+      
+      Generate complete instrumentation quality score with actionable recommendations.
+

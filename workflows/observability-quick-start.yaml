@@ -1,0 +1,246 @@
+name: Observability Quick Start
+version: 1.0.0
+description: Interactive guide to set up comprehensive observability from scratch
+
+steps:
+  - step: understand-environment
+    ask: |
+      Let's set up observability for your environment! I need to understand a few things:
+      
+      1. **What's your tech stack?**
+         - Language(s): Go, Python, Java, Node.js, .NET, etc.
+         - Framework(s): Spring Boot, Django, Express, etc.
+      
+      2. **Where are you deploying?**
+         - Kubernetes
+         - Docker/Docker Compose
+         - VMs
+         - Serverless (Lambda, Cloud Functions, etc.)
+         - Bare metal
+      
+      3. **Current scale?**
+         - Number of services
+         - Request volume (requests/second)
+         - Data volume estimates
+      
+      4. **Observability backend?**
+         - Dynatrace
+         - Datadog
+         - New Relic
+         - Self-hosted (Tempo, Prometheus, Loki, Jaeger)
+         - Not decided yet
+      
+      5. **What are your main goals?**
+         - Troubleshoot performance issues
+         - Monitor SLAs/SLOs
+         - Reduce MTTR
+         - Cost optimization
+         - Compliance/audit requirements
+    
+    save_to: environment_info
+
+  - step: design-architecture
+    prompt: |
+      Based on this environment:
+      
+      {{environment_info}}
+      
+      Design a complete observability architecture including:
+      
+      1. **Instrumentation Layer**
+         - Auto-instrumentation vs manual (recommendation with rationale)
+         - SDK configuration for each language
+         - Required attributes (service.name, deployment.environment, etc.)
+      
+      2. **Collection Layer**
+         - OpenTelemetry Collector deployment pattern (agent, gateway, or both)
+         - Collector configuration (receivers, processors, exporters)
+         - Resource requirements and scaling
+      
+      3. **Storage/Backend Layer**
+         - Backend configuration and integration
+         - Retention policies
+         - Data volume estimates and costs
+      
+      4. **Visualization Layer**
+         - Dashboards to create
+         - Alerts to configure
+         - SLOs to define
+      
+      Create architecture diagram in Markdown and provide complete configuration files.
+    
+    save_to: architecture_design
+
+  - step: implementation-plan
+    prompt: |
+      Create a detailed 4-week implementation plan for this architecture:
+      
+      {{architecture_design}}
+      
+      Break down into weekly milestones with:
+      - Specific tasks and deliverables
+      - Success criteria for each milestone
+      - Estimated effort (hours/days)
+      - Dependencies and prerequisites
+      - Risk mitigation strategies
+      
+      Format as a project plan with clear action items.
+    
+    save_to: implementation_plan
+
+  - step: week1-semconv-and-collector
+    prompt: |
+      ## Week 1: Foundation - Semantic Conventions & Collector
+      
+      Let's start implementing the plan:
+      
+      {{implementation_plan}}
+      
+      For Week 1, we'll:
+      1. Define semantic conventions (standard + custom)
+      2. Build custom collector distribution
+      
+      Execute:
+      - Run: *create-custom-semconv
+      - Run: *build-collector-distro
+      
+      Provide step-by-step instructions with validation checkpoints.
+    
+    save_to: week1_tasks
+
+  - step: week2-instrumentation
+    prompt: |
+      ## Week 2: Instrumentation & Validation
+      
+      Now let's instrument the applications:
+      
+      Based on: {{environment_info}}
+      
+      For each service:
+      1. Configure auto-instrumentation (if applicable)
+      2. Add manual instrumentation for custom metrics/spans
+      3. Enable trace context in logs
+      4. Configure sampling strategy
+      5. Validate with *score-instrumentation (target: 85+)
+      
+      Provide language-specific code examples and configuration.
+    
+    save_to: week2_tasks
+
+  - step: week3-dashboards-alerting
+    prompt: |
+      ## Week 3: Dashboards, Alerting & Workflows
+      
+      Set up observability platform features:
+      
+      1. Create dashboards:
+         - RED metrics for each service
+         - Infrastructure overview
+         - Custom business metrics
+         Execute: *create-dt-dashboard
+      
+      2. Define SLOs:
+         - Availability: 99.9%
+         - Latency: p95 < 200ms
+         - Error rate: < 1%
+         Execute: *configure-dt-alerting
+      
+      3. Create workflows:
+         - Auto-remediation for common issues
+         - Incident response automation
+         Execute: *create-dt-workflow
+      
+      Provide complete configuration with testing procedures.
+    
+    save_to: week3_tasks
+
+  - step: week4-production-ready
+    prompt: |
+      ## Week 4: Quality Gates & Production Rollout
+      
+      Final validation and deployment:
+      
+      1. Run comprehensive quality checks:
+         Execute: *check-quality
+         Target: 90+ score
+      
+      2. Load testing:
+         - Test collector under 2x expected load
+         - Verify no data loss
+         - Check backend performance
+      
+      3. Production deployment plan:
+         - Blue/green deployment strategy
+         - Rollback procedures
+         - Monitoring the monitors
+      
+      4. Documentation:
+         - Runbooks for common issues
+         - Architecture diagrams
+         - Configuration as code in Git
+      
+      Provide go/no-go checklist and deployment runbook.
+    
+    save_to: week4_tasks
+
+  - step: continuous-improvement
+    prompt: |
+      ## Continuous Improvement Plan
+      
+      After successful deployment, establish ongoing practices:
+      
+      **Monthly Reviews:**
+      - Review quality score: *check-quality
+      - Analyze cardinality trends: *optimize-cardinality
+      - Check for collector updates: *compare-collector-versions
+      - Review and update SLOs based on actual performance
+      
+      **Quarterly Updates:**
+      - Update to latest OTel Collector version
+      - Review and update semantic conventions
+      - Assess observability maturity: *assess-observability
+      - Cost optimization review
+      
+      **Incident-Driven:**
+      - Update runbooks based on incidents
+      - Add new alerts for uncovered scenarios
+      - Improve dashboards based on usage
+      
+      Create a tracking document for these activities.
+    
+    save_to: improvement_plan
+
+  - step: summary
+    prompt: |
+      Generate final implementation summary:
+      
+      # Observability Implementation Complete! 🎉
+      
+      ## What Was Implemented
+      
+      {{architecture_design}}
+      
+      ## Milestones Achieved
+      
+      - Week 1: {{week1_tasks}}
+      - Week 2: {{week2_tasks}}
+      - Week 3: {{week3_tasks}}
+      - Week 4: {{week4_tasks}}
+      
+      ## Current Status
+      
+      Run final quality check and display results.
+      
+      ## Next Steps
+      
+      {{improvement_plan}}
+      
+      ## Resources
+      
+      - All configuration files in Git
+      - Dashboards accessible at [URLs]
+      - Runbooks in wiki
+      - Team training materials
+      
+      Congratulations on achieving production-grade observability!
+

@@ -1,0 +1,52 @@
+name: Validate Observability Setup
+version: 1.0.0
+description: Validate observability against vendor requirements and best practices
+
+steps:
+  - step: select-vendor
+    ask: |
+      Which observability vendor are you validating against?
+      
+      - Dynatrace
+      - Datadog
+      - New Relic
+      - Grafana Cloud
+      - AWS X-Ray
+      - Google Cloud Operations
+      - Azure Monitor
+      - Custom/Self-hosted
+    
+    save_to: vendor
+
+  - step: run-validation
+    prompt: |
+      Run comprehensive validation for {{vendor}}:
+      
+      Execute: #vendor-compatibility
+      
+      Check:
+      1. Required attributes present
+      2. Correct data format
+      3. Authentication configured
+      4. Network connectivity
+      5. Data flowing correctly
+      6. Vendor-specific requirements
+      
+      Generate validation report with pass/fail for each check.
+    
+    save_to: validation_results
+
+  - step: remediation
+    prompt: |
+      Based on validation results:
+      
+      {{validation_results}}
+      
+      For each failed check, provide:
+      - What's wrong
+      - How to fix it
+      - Configuration example
+      - Verification steps
+      
+      Generate remediation plan.
+

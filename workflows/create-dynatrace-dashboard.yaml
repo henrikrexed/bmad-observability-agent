@@ -1,0 +1,54 @@
+name: Create Dynatrace Dashboard
+version: 1.0.0
+description: Create Dynatrace dashboard using Monaco
+
+steps:
+  - step: choose-template
+    ask: |
+      What type of dashboard do you want to create?
+      
+      1. **RED Metrics** - Rate, Errors, Duration for services
+      2. **Kubernetes Overview** - Cluster health, pod status, resources
+      3. **Database Performance** - Query duration, connections, errors
+      4. **Infrastructure** - Host CPU, memory, disk, network
+      5. **SLO Tracking** - Error budget, compliance over time
+      6. **Custom** - Build from scratch
+    
+    save_to: dashboard_type
+
+  - step: gather-details
+    ask: |
+      Dashboard details:
+      
+      - Name:
+      - Owner:
+      - Timeframe: (Last hour, Last day, Last week)
+      - Management Zone: (optional, for filtering)
+      - Sharing: (Private or Team)
+    
+    save_to: dashboard_details
+
+  - step: define-tiles
+    ask: |
+      What tiles/widgets should be included?
+      
+      For each tile specify:
+      - Title
+      - Type: (Graph, Pie Chart, Table, Single Value)
+      - Metric(s): (e.g., builtin:service.response.time)
+      - Filters
+      - Visualization preferences
+    
+    save_to: tile_definitions
+
+  - step: generate-dashboard
+    prompt: |
+      Generate dashboard JSON for:
+      
+      Type: {{dashboard_type}}
+      Details: {{dashboard_details}}
+      Tiles: {{tile_definitions}}
+      
+      Create complete dashboard JSON and Monaco configuration.
+      Provide deployment commands.
+

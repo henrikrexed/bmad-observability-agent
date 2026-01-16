@@ -1,0 +1,81 @@
+name: Create Custom Semantic Conventions
+version: 1.0.0
+description: Create custom semantic conventions using Weaver schema format
+
+steps:
+  - step: define-namespace
+    ask: |
+      Let's create custom semantic conventions!
+      
+      1. **What's your namespace?**
+         Example: mycompany, myproduct, feature-name
+         This prevents conflicts with standard conventions.
+      
+      2. **What type of data are you instrumenting?**
+         - Business transactions
+         - Domain-specific metrics
+         - Custom events
+         - Application-specific attributes
+      
+      3. **What attributes do you need?**
+         List attributes with:
+         - Name
+         - Type (string, int, double, boolean)
+         - Description
+         - Examples
+         - Required or optional
+    
+    save_to: custom_requirements
+
+  - step: create-schema
+    prompt: |
+      Create Weaver schema definition for:
+      
+      {{custom_requirements}}
+      
+      Generate complete schema YAML files with:
+      - Proper namespace
+      - Attribute definitions
+      - Type specifications
+      - Documentation
+      - Examples
+      - Requirement levels
+      
+      Follow OpenTelemetry schema format exactly.
+    
+    save_to: schema_files
+
+  - step: generate-code
+    prompt: |
+      Generate type-safe instrumentation code from schemas:
+      
+      {{schema_files}}
+      
+      Create code for these languages:
+      - Go
+      - Python
+      - Java
+      - TypeScript
+      
+      Include:
+      - Constants for attribute keys
+      - Helper functions
+      - Type definitions
+      - Usage examples
+    
+    save_to: generated_code
+
+  - step: create-docs
+    prompt: |
+      Generate documentation from schemas:
+      
+      {{schema_files}}
+      
+      Create:
+      - Markdown reference docs
+      - HTML documentation site
+      - Migration guides
+      - Usage examples
+      
+      Using Weaver docs generation.
+

@@ -1,0 +1,64 @@
+name: Setup Dynatrace
+version: 1.0.0
+description: Configure Dynatrace integration using Monaco
+
+steps:
+  - step: install-monaco
+    prompt: |
+      Install Dynatrace Monaco (configuration as code tool):
+      
+      # macOS
+      brew install dynatrace/dynatrace/monaco
+      
+      # Linux
+      wget https://github.com/dynatrace/dynatrace-configuration-as-code/releases/latest/download/monaco-linux-amd64
+      chmod +x monaco-linux-amd64
+      sudo mv monaco-linux-amd64 /usr/local/bin/monaco
+      
+      # Verify
+      monaco version
+      
+      Provide installation commands for user's OS.
+
+  - step: configure-environments
+    ask: |
+      Dynatrace environment details:
+      
+      **Development:**
+      - Environment URL: https://[your-id].live.dynatrace.com
+      - API Token: (will be set as env var DT_DEV_TOKEN)
+      
+      **Staging:**
+      - Environment URL:
+      - API Token: (env var DT_STAGING_TOKEN)
+      
+      **Production:**
+      - Environment URL:
+      - API Token: (env var DT_PROD_TOKEN)
+      
+      Required token scopes:
+      - Read/Write configuration
+      - Read/Write settings
+      - Read/Write SLO
+    
+    save_to: dt_environments
+
+  - step: create-project-structure
+    prompt: |
+      Create Monaco project structure with:
+      
+      {{dt_environments}}
+      
+      Generate:
+      1. environments.yaml
+      2. manifest.yaml
+      3. Project directories:
+         - dashboards/
+         - notebooks/
+         - workflows/
+         - alerting/
+         - synthetic/
+         - management-zones/
+      
+      Provide complete directory structure and config files.
+

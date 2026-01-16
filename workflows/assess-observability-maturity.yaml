@@ -1,0 +1,177 @@
+name: Assess Observability Maturity
+version: 1.0.0
+description: Comprehensive assessment of observability maturity with improvement roadmap
+
+steps:
+  - step: run-quality-checks
+    prompt: |
+      Running comprehensive quality checks on your observability setup...
+      
+      Execute: #observability-quality-check
+      
+      This will assess:
+      1. Signal coverage (traces, metrics, logs)
+      2. Signal correlation
+      3. Semantic convention compliance
+      4. Cardinality management
+      5. Production readiness
+      6. Operational maturity
+      
+      Analyzing current state...
+    
+    save_to: quality_report
+
+  - step: calculate-maturity-score
+    prompt: |
+      Based on the quality check results:
+      
+      {{quality_report}}
+      
+      Calculate observability maturity score (0-5 scale) across these dimensions:
+      
+      ## 1. Instrumentation Maturity
+      
+      **Level 0 - None:**
+      - No observability instrumentation
+      - Flying blind
+      
+      **Level 1 - Basic:**
+      - Some logging
+      - Basic health checks
+      - Reactive monitoring
+      
+      **Level 2 - Developing:**
+      - Structured logging
+      - Some metrics (CPU, memory)
+      - Basic dashboards
+      - Manual correlation
+      
+      **Level 3 - Defined:**
+      - Three signals (traces, metrics, logs)
+      - Trace context in logs
+      - Semantic conventions followed
+      - Auto-instrumentation used
+      
+      **Level 4 - Managed:**
+      - All signals fully integrated
+      - Exemplars enabled (metrics → traces)
+      - Custom business metrics
+      - Intelligent sampling
+      - SLOs defined
+      
+      **Level 5 - Optimized:**
+      - Continuous profiling
+      - Predictive alerting
+      - Automated remediation
+      - Cost-optimized
+      - Full observability-as-code
+      
+      ## 2. Collection Maturity
+      
+      **Level 0:** No collectors
+      **Level 1:** Single collector, no HA
+      **Level 2:** HA collectors, basic configuration
+      **Level 3:** Optimized pipelines, resource limits, monitoring
+      **Level 4:** Custom-built collectors, multi-tier deployment
+      **Level 5:** Fully automated, self-healing, optimized for cost
+      
+      ## 3. Observability Platform Maturity
+      
+      **Level 0:** No centralized platform
+      **Level 1:** Basic dashboards
+      **Level 2:** Dashboards + basic alerting
+      **Level 3:** SLOs, custom dashboards, alert correlation
+      **Level 4:** Workflows, notebooks, automated analysis
+      **Level 5:** AI-powered insights, predictive analytics
+      
+      ## 4. Operational Maturity
+      
+      **Level 0:** No SRE practices
+      **Level 1:** Basic incident response
+      **Level 2:** Runbooks, postmortems
+      **Level 3:** SLO-driven development, blameless culture
+      **Level 4:** Chaos engineering, continuous improvement
+      **Level 5:** Self-healing systems, full automation
+      
+      Calculate overall maturity score and provide detailed assessment.
+    
+    save_to: maturity_assessment
+
+  - step: improvement-roadmap
+    prompt: |
+      Based on current maturity:
+      
+      {{maturity_assessment}}
+      
+      Create a prioritized improvement roadmap with specific, actionable steps:
+      
+      ## Immediate Actions (This Week)
+      
+      For each gap at current maturity level:
+      - What to fix
+      - Why it matters
+      - How to fix (with commands/workflows)
+      - Expected impact
+      - Effort estimate
+      
+      ## Short-term Goals (Next Month)
+      
+      Steps to reach next maturity level:
+      - Key capabilities to add
+      - Tools/processes to implement
+      - Training required
+      - Success metrics
+      
+      ## Mid-term Goals (Next Quarter)
+      
+      Strategic improvements:
+      - Architecture enhancements
+      - Team capability building
+      - Process automation
+      - Cost optimization
+      
+      ## Long-term Vision (6 Months)
+      
+      Path to observability excellence:
+      - Target maturity level
+      - Required investments
+      - Organizational changes
+      - Expected outcomes
+      
+      Format as actionable project plan with timeline and owners.
+    
+    save_to: improvement_roadmap
+
+  - step: generate-report
+    prompt: |
+      Generate comprehensive maturity assessment report:
+      
+      # Observability Maturity Assessment Report
+      
+      ## Executive Summary
+      
+      {{maturity_assessment}}
+      
+      ## Current State Analysis
+      
+      {{quality_report}}
+      
+      ## Improvement Roadmap
+      
+      {{improvement_roadmap}}
+      
+      ## Success Metrics
+      
+      How we'll measure progress:
+      - Quality score: Current vs Target
+      - MTTR: Current vs Target
+      - Coverage: % of services with full observability
+      - Compliance: Semantic convention compliance %
+      - Cost efficiency: Observability cost per service
+      
+      ## Recommended Next Steps
+      
+      Top 3 priorities based on ROI and impact.
+      
+      Format as executive-friendly report with clear recommendations.
+

@@ -1,0 +1,53 @@
+name: Validate Semantic Conventions
+version: 1.0.0
+description: Validate telemetry data against OpenTelemetry semantic conventions using Weaver
+
+steps:
+  - step: export-telemetry
+    prompt: |
+      Export sample telemetry data from your applications for validation.
+      
+      Methods:
+      1. From Jaeger: Export traces as JSON
+      2. From collector: Add file exporter temporarily
+      3. From backend API: Download recent data
+      
+      Provide export commands based on your setup.
+    
+    save_to: export_method
+
+  - step: validate-with-weaver
+    prompt: |
+      Execute Weaver validation:
+```bash
+      weaver registry validate \
+        --registry=./semconv/registry \
+        --telemetry=./exported-telemetry.json \
+        --output=validation-report.json
+```
+      
+      Parse results and generate compliance report showing:
+      - Compliance rate (%)
+      - Missing required attributes
+      - Incorrect attribute types
+      - Non-standard attributes
+      - Deprecated attributes
+      
+      Target: 95%+ compliance for production readiness.
+    
+    save_to: validation_report
+
+  - step: generate-fixes
+    prompt: |
+      Based on violations found:
+      
+      {{validation_report}}
+      
+      Generate specific code fixes for each violation type:
+      - Add missing attributes
+      - Fix attribute types
+      - Replace deprecated attributes
+      - Standardize custom attributes
+      
+      Provide language-specific code examples (Go, Python, Java, etc.).
+

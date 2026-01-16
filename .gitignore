@@ -1,0 +1,25 @@
+# B-MAD generated files
+dist/
+node_modules/
+*.log
+
+# Agent memory (local only)
+agent/_memory/
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+temp/

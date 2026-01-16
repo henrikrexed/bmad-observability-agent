@@ -1,0 +1,96 @@
+name: Build Collector Distribution
+version: 1.0.0
+description: Build custom OpenTelemetry Collector distribution using OCB
+
+steps:
+  - step: select-components
+    ask: |
+      Which components do you need in your custom collector?
+      
+      **Receivers** (select all that apply):
+      - OTLP (required)
+      - Prometheus
+      - Jaeger
+      - Kafka
+      - Kubernetes (k8scluster, kubeletstats)
+      - Host metrics
+      - File logs
+      - Database (PostgreSQL, MySQL, MongoDB, Redis)
+      - Other (specify)
+      
+      **Processors** (select all that apply):
+      - Batch (required)
+      - Memory Limiter (required)
+      - Tail Sampling
+      - K8s Attributes
+      - Resource Detection
+      - Transform
+      - Filter
+      - Other (specify)
+      
+      **Exporters** (select all that apply):
+      - OTLP (required)
+      - Prometheus
+      - Prometheus Remote Write
+      - Jaeger
+      - Datadog
+      - Dynatrace
+      - Loki
+      - Other (specify)
+    
+    save_to: component_selection
+
+  - step: generate-manifest
+    prompt: |
+      Generate OCB builder manifest for:
+      
+      {{component_selection}}
+      
+      Create builder-config.yaml with:
+      - Correct component versions
+      - All selected components
+      - Optimization flags (-s -w)
+      - Static linking options
+      
+      Include version: v0.93.0 (or latest)
+    
+    save_to: ocb_manifest
+
+  - step: build-options
+    ask: |
+      How would you like to build?
+      
+      1. **Platforms** (select all):
+         - Linux AMD64
+         - Linux ARM64
+         - macOS AMD64 (Intel)
+         - macOS ARM64 (Apple Silicon)
+         - Windows AMD64
+      
+      2. **Output format**:
+         - Binary only
+         - Container image (Docker)
+         - Both
+      
+      3. **Optimizations**:
+         - Size optimization (UPX compression)
+         - Multi-arch image
+    
+    save_to: build_options
+
+  - step: execute-build
+    prompt: |
+      Execute build with:
+      
+      Manifest: {{ocb_manifest}}
+      Options: {{build_options}}
+      
+      Generate:
+      1. Build commands for all selected platforms
+      2. Dockerfile for container image
+      3. CI/CD pipeline (GitHub Actions)
+      4. Testing procedure
+      5. Deployment manifests (K8s)
+      
+      Provide complete build and deployment workflow.
+
