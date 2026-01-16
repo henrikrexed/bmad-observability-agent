@@ -2,124 +2,135 @@
 
 ## Prerequisites
 
-1. **B-MAD Method** (v6 or later)
-```bash
-   npx bmad-method@alpha install
-```
-
-2. **Node.js** v20 or later
-```bash
-   node --version  # Should be >= 20.0.0
-```
-
-3. **AI Assistant** with B-MAD support
+1. **AI Assistant** with BMAD support
    - Claude Code
    - Cursor
    - Windsurf
    - Claude.ai (web interface)
 
-## Installation Steps
+2. **Git** for cloning the repository
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/henrikrexed/bmad-observability-agent.git
-cd bmad-observability-agent
+## Repository Structure
+
+```
+bmad-observability-agent/
+├── .bmad/
+│   ├── agents/
+│   │   └── o11y-engineer.agent.yaml    # Main agent file (37 prompts)
+│   └── workflows/
+│       ├── observability-quick-start.yaml
+│       ├── assess-observability-maturity.yaml
+│       ├── configure-collector-pipeline.yaml
+│       ├── build-collector-distro.yaml
+│       ├── create-custom-semconv.yaml
+│       ├── validate-semantic-conventions.yaml
+│       ├── setup-dynatrace.yaml
+│       ├── create-dynatrace-dashboard.yaml
+│       ├── create-dynatrace-workflow.yaml
+│       └── validate-observability.yaml
+├── docs/
+│   └── installation.md
+├── README.md
+├── CONTRIBUTING.md
+└── LICENSE
 ```
 
-### 2. Locate Your B-MAD Project
+## Installation Methods
+
+### Method 1: Copy to Existing BMAD Project (Recommended)
+
 ```bash
-# Find your B-MAD project directory
+# Clone the observability agent repository
+git clone https://github.com/henrikrexed/bmad-observability-agent.git
+
+# Navigate to your existing BMAD project
 cd /path/to/your/bmad-project
 
-# Verify it's a B-MAD project
-ls .bmad/  # Should contain workflows directory
+# Copy the agent
+cp bmad-observability-agent/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
+
+# Copy all workflows
+cp bmad-observability-agent/.bmad/workflows/*.yaml .bmad/workflows/
 ```
 
-### 3. Copy Agent Files
+### Method 2: Use as Standalone Project
+
 ```bash
-# Create agent directory
-mkdir -p my-custom-stuff/agents/o11y-engineer
+# Clone and use directly
+git clone https://github.com/henrikrexed/bmad-observability-agent.git
+cd bmad-observability-agent
 
-# Copy agent configuration
-cp /path/to/bmad-observability-agent/agent/o11y-engineer.agent.yaml \
-   my-custom-stuff/agents/o11y-engineer/
-
-# Copy workflows
-cp -r /path/to/bmad-observability-agent/workflows/* \
-   .bmad/workflows/
+# The .bmad directory is ready to use with your AI assistant
 ```
 
-### 4. Build the Agent
+### Method 3: Git Submodule (for version tracking)
+
 ```bash
-# Build the O11y Engineer agent
-npx bmad-method@alpha build o11y-engineer
+# Add as submodule to your project
+cd /path/to/your/project
+git submodule add https://github.com/henrikrexed/bmad-observability-agent.git .bmad-o11y
 
-# Or rebuild all agents
-npx bmad-method@alpha install
-# Select "compile all agents" option
+# Create symlinks to your .bmad directory
+mkdir -p .bmad/agents .bmad/workflows
+ln -s ../.bmad-o11y/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
+for f in .bmad-o11y/.bmad/workflows/*.yaml; do
+  ln -s "../$f" .bmad/workflows/
+done
 ```
 
-Expected output:
-```
-✓ Building agent: o11y-engineer
-✓ Validating configuration
-✓ Compiling workflows
-✓ Agent ready to use
-```
+## Verify Installation
 
-### 5. Verify Installation
-
-In your AI assistant:
+### Check Files Exist
 ```bash
-# List available agents
-*help
+# Agent file
+ls -la .bmad/agents/o11y-engineer.agent.yaml
+# Should show ~196KB file
 
-# Should see o11y-engineer in the list
-
-# Activate the agent
-*o11y-engineer
-
-# You should see the agent menu
+# Workflows
+ls -la .bmad/workflows/
+# Should show 10 workflow files
 ```
 
-## Troubleshooting
+### Test in AI Assistant
 
-### Agent Not Found
-```bash
-# Check agent file exists
-ls my-custom-stuff/agents/o11y-engineer/o11y-engineer.agent.yaml
+In Claude Code or your AI assistant:
+```
+# Load the agent
+Read the file .bmad/agents/o11y-engineer.agent.yaml and use it as your persona.
 
-# Rebuild
-npx bmad-method@alpha build o11y-engineer
+# Or reference a specific action
+*quick-start
+*check-quality
+*generate-handoff
 ```
 
-### Workflows Not Loading
-```bash
-# Check workflows exist
-ls .bmad/workflows/
+## Agent Statistics
 
-# Should see:
-# - observability-quick-start.yaml
-# - assess-observability-maturity.yaml
-# - configure-collector-pipeline.yaml
-# - etc.
+| Metric | Value |
+|--------|-------|
+| Total Prompts | 37 |
+| Menu Commands | 44 |
+| Workflows | 10 |
+| File Size | ~196KB |
+| Lines | ~6,151 |
 
-# Check YAML syntax
-npx js-yaml .bmad/workflows/observability-quick-start.yaml
-```
+### Prompt Categories
 
-### Permission Issues
-```bash
-# Ensure files are readable
-chmod 644 my-custom-stuff/agents/o11y-engineer/*.yaml
-chmod 644 .bmad/workflows/*.yaml
-```
+| Category | Count | Description |
+|----------|-------|-------------|
+| BMAD Collaboration | 4 | Handoff, epics, status, sync |
+| Core Orchestration | 4 | Intent detection, quality, remediation |
+| Instrumentation | 9 | Auto/manual instrumentation, scoring |
+| Weaver (Semconv) | 5 | Docs, code gen, validation |
+| OCB (Collector) | 7 | Build custom collectors |
+| Dynatrace | 8 | Monaco automation |
 
 ## Optional Dependencies
 
 ### For OpenTelemetry Collector Building
+
 ```bash
-# Install Go (for OCB)
+# Install Go (required for OCB)
 # macOS
 brew install go
 
@@ -131,15 +142,17 @@ go install go.opentelemetry.io/collector/cmd/builder@latest
 ```
 
 ### For Semantic Convention Management
-```bash
-# Install Weaver
-go install github.com/open-telemetry/weaver/cmd/weaver@latest
 
-# Verify
-weaver version
+```bash
+# Install Weaver (Rust-based)
+cargo install weaver-cli
+
+# Or download pre-built binary
+# https://github.com/open-telemetry/weaver/releases
 ```
 
 ### For Dynatrace Automation
+
 ```bash
 # Install Monaco
 # macOS
@@ -154,36 +167,35 @@ sudo mv monaco-linux-amd64 /usr/local/bin/monaco
 monaco version
 ```
 
-## Next Steps
-
-- Read the [Quick Start Guide](quick-start.md)
-- Explore [Workflows Guide](workflows-guide.md)
-- Check out [Examples](examples/)
-
 ## Updating
+
+### From Git Repository
+
 ```bash
-# Pull latest changes
-cd /path/to/bmad-observability-agent
-git pull
+cd bmad-observability-agent
+git pull origin main
 
-# Copy updated files
-cp agent/o11y-engineer.agent.yaml \
-   /path/to/your/bmad-project/my-custom-stuff/agents/o11y-engineer/
+# If using as submodule
+git submodule update --remote
+```
 
-cp -r workflows/* \
-   /path/to/your/bmad-project/.bmad/workflows/
+### Copy Updated Files
 
-# Rebuild
-cd /path/to/your/bmad-project
-npx bmad-method@alpha build o11y-engineer
+```bash
+# Copy updated agent
+cp bmad-observability-agent/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
+
+# Copy updated workflows
+cp bmad-observability-agent/.bmad/workflows/*.yaml .bmad/workflows/
 ```
 
 ## Uninstallation
+
 ```bash
 # Remove agent
-rm -rf my-custom-stuff/agents/o11y-engineer/
+rm .bmad/agents/o11y-engineer.agent.yaml
 
-# Remove workflows (optional - may be shared)
+# Remove workflows
 rm .bmad/workflows/observability-*.yaml
 rm .bmad/workflows/assess-*.yaml
 rm .bmad/workflows/configure-*.yaml
@@ -192,6 +204,49 @@ rm .bmad/workflows/setup-*.yaml
 rm .bmad/workflows/create-*.yaml
 rm .bmad/workflows/validate-*.yaml
 
-# Rebuild B-MAD
-npx bmad-method@alpha install
+# If using submodule
+git submodule deinit .bmad-o11y
+git rm .bmad-o11y
 ```
+
+## Troubleshooting
+
+### Agent Not Loading
+
+1. Check file path is correct:
+```bash
+cat .bmad/agents/o11y-engineer.agent.yaml | head -20
+```
+
+2. Verify YAML syntax:
+```bash
+python3 -c "import yaml; yaml.safe_load(open('.bmad/agents/o11y-engineer.agent.yaml'))"
+```
+
+### Workflows Not Found
+
+1. Check workflows directory:
+```bash
+ls .bmad/workflows/*.yaml | wc -l
+# Should return 10
+```
+
+2. Verify workflow references in agent match file names
+
+### Permission Issues
+
+```bash
+chmod 644 .bmad/agents/*.yaml
+chmod 644 .bmad/workflows/*.yaml
+```
+
+## Next Steps
+
+After installation:
+
+1. **Quick Start** - Run `*quick-start` for new observability setup
+2. **Assessment** - Run `*assess-observability` for existing setups
+3. **Quality Check** - Run `*check-quality` for scoring
+4. **Handoff** - Run `*generate-handoff` for multi-agent collaboration
+
+See [README.md](../README.md) for full documentation.

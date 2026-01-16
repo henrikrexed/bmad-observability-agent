@@ -27,18 +27,37 @@ The B-MAD Observability Agent is an AI-powered expert that helps you build produ
 - AI assistant (Claude Code, Cursor, Windsurf, etc.)
 
 ### Installation
+
+**Option 1: Copy to existing BMAD project**
 ```bash
 # Clone this repository
 git clone https://github.com/henrikrexed/bmad-observability-agent.git
+
+# Copy .bmad directory to your project
+cp -r bmad-observability-agent/.bmad/ <your-project>/.bmad/
+
+# Or selectively copy agent and workflows
+cp bmad-observability-agent/.bmad/agents/o11y-engineer.agent.yaml <your-project>/.bmad/agents/
+cp bmad-observability-agent/.bmad/workflows/*.yaml <your-project>/.bmad/workflows/
+```
+
+**Option 2: Use as standalone BMAD project**
+```bash
+# Clone and use directly
+git clone https://github.com/henrikrexed/bmad-observability-agent.git
 cd bmad-observability-agent
 
-# Copy agent to your B-MAD project
-cp -r agent/ <your-bmad-project>/my-custom-stuff/agents/o11y-engineer/
-cp -r workflows/ <your-bmad-project>/.bmad/workflows/
+# The .bmad directory is ready to use
+```
 
-# Build the agent
-cd <your-bmad-project>
-npx bmad-method@alpha build o11y-engineer
+**Option 3: Git submodule**
+```bash
+# Add as submodule to your project
+git submodule add https://github.com/henrikrexed/bmad-observability-agent.git .bmad-o11y
+
+# Symlink to .bmad
+ln -s .bmad-o11y/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
+ln -s .bmad-o11y/.bmad/workflows/*.yaml .bmad/workflows/
 ```
 
 ### First Use
@@ -120,6 +139,42 @@ Score: 0-100 with actionable recommendations
 - Implement SLOs and alerting
 - Automate incident response
 - Reduce observability costs by 30-50%
+
+## 🤝 Multi-Agent Collaboration (BMAD)
+
+This agent supports seamless handoff to other BMAD agents:
+
+```bash
+# Generate handoff for next agent
+*generate-handoff
+
+# Create epics/stories for tracking
+*create-epic
+
+# Get machine-readable status
+*status-report
+
+# Sync from previous agent session
+*sync-status
+```
+
+**Handoff Output Example:**
+```yaml
+handoff:
+  agent: "o11y-engineer"
+  observability_status:
+    overall_score: 78
+    production_ready: false
+  completed_actions:
+    - action: "Configured OTel Collector"
+      result: "success"
+  pending_tasks:
+    - task: "Add memory_limiter"
+      priority: "critical"
+  recommendations:
+    immediate:
+      - "Scale collector to 3 replicas"
+```
 
 ## 🛠️ Agent Capabilities
 
