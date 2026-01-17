@@ -1,0 +1,133 @@
+name: Build Project Dashboard
+version: 1.0.0
+description: Build a Dynatrace dashboard with key metrics discovered from your environment (MCP-powered)
+
+steps:
+  - step: discover-services
+    prompt: |
+      Use the Dynatrace MCP to discover services in the environment.
+
+      **If MCP is available:**
+      Execute DQL to find services:
+      ```dql
+      fetch dt.entity.service
+      | fields entity.name, entity.type
+      | limit 50
+      ```
+
+      **If MCP is not available:**
+      Ask the user to provide:
+      - Service names to monitor
+      - Application/namespace context
+
+      List all discovered services for the user to select from.
+
+    save_to: discovered_services
+
+  - step: select-services
+    ask: |
+      Based on the discovered services:
+
+      {{discovered_services}}
+
+      Which services should be included in the dashboard?
+      (comma-separated list or "all")
+
+      Also specify:
+      - Dashboard name:
+      - Owner/team:
+      - Management zone (optional):
+
+    save_to: selected_services
+
+  - step: discover-metrics
+    prompt: |
+      For the selected services, discover available metrics using MCP.
+
+      **If MCP is available:**
+      Execute DQL queries to find key metrics:
+
+      ```dql
+      // Response time
+      fetch dt.metrics
+      | filter metric.key == "builtin:service.response.time"
+      | limit 10
+      ```
+
+      ```dql
+      // Error rate
+      fetch dt.metrics
+      | filter metric.key == "builtin:service.errors.total.rate"
+      | limit 10
+      ```
+
+      ```dql
+      // Throughput
+      fetch dt.metrics
+      | filter metric.key == "builtin:service.requestCount.total"
+      | limit 10
+      ```
+
+      **If MCP is not available:**
+      Use standard Dynatrace metrics:
+      - builtin:service.response.time
+      - builtin:service.errors.total.rate
+      - builtin:service.requestCount.total
+      - builtin:service.cpu.time
+
+      Identify RED metrics (Rate, Errors, Duration) for each service.
+
+    save_to: discovered_metrics
+
+  - step: generate-dashboard
+    prompt: |
+      Generate a complete Dynatrace dashboard YAML for dtctl.
+
+      Services: {{selected_services}}
+      Metrics: {{discovered_metrics}}
+
+      Create a dashboard with:
+
+      ## Layout Structure
+      1. **Header Row** - Dashboard title, time filter, management zone selector
+      2. **Overview Row** - Key metrics summary (single value tiles)
+         - Total Request Rate
+         - Overall Error Rate
+         - P95 Response Time
+      3. **Service Rows** - One row per service with:
+         - Response Time graph (P50, P95, P99)
+         - Error Rate graph
+         - Throughput graph
+      4. **Comparison Row** - Service comparison charts
+
+      ## Output Format
+      Generate YAML file: `dashboards/{{dashboard_name}}.yaml`
+
+      ```yaml
+      # dashboards/project-overview.yaml
+      apiVersion: platform.dynatrace.com/v1
+      kind: Dashboard
+      metadata:
+        name: {{dashboard_name}}
+      spec:
+        dashboardMetadata:
+          name: "{{dashboard_title}}"
+          shared: true
+          owner: "{{owner}}"
+        tiles:
+          # Generate tiles with actual DQL queries
+      ```
+
+      ## Deployment Commands
+      ```bash
+      # Validate before applying
+      dtctl apply -f dashboards/{{dashboard_name}}.yaml --dry-run
+
+      # Apply to Dynatrace
+      dtctl apply -f dashboards/{{dashboard_name}}.yaml
+
+      # Verify deployment
+      dtctl get dashboards | grep {{dashboard_name}}
+      ```
+
+      Generate the complete dashboard YAML file.

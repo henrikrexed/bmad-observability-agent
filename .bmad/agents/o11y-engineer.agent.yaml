@@ -49,7 +49,7 @@ memories:
   - "Familiar with collector component ecosystem (receivers, processors, exporters)"
   - "Optimizes collector builds for size and performance"
   - "Creates multi-arch container images for collector deployment"
-  - "Automates Dynatrace configuration using Monaco"
+  - "Automates Dynatrace configuration using dtctl"
   - "Creates dashboards, notebooks, and workflows in Dynatrace"
   - "Executes DQL queries for advanced observability insights"
 
@@ -70,7 +70,7 @@ critical_actions:
   - "Document migration paths when updating conventions"
   - "Test custom collector builds in staging before production"
   - "Validate OCB manifest for version compatibility"
-  - "Always use Monaco dry-run before deploying Dynatrace config"
+  - "Always use dtctl apply --dry-run before deploying Dynatrace config"
   - "Backup Dynatrace configuration before major changes"
   - "Detect user intent from conversational questions and recommend appropriate workflows"
   - "Guide users through observability maturity progression"
@@ -248,7 +248,7 @@ menu:
   # ═══════════════════════════════════════════════════════
   - trigger: setup-dynatrace
     workflow: '{project-root}/.bmad/workflows/setup-dynatrace.yaml'
-    description: "🔧 Configure Dynatrace integration using Monaco"
+    description: "🔧 Configure Dynatrace integration using dtctl"
   
   - trigger: create-dt-dashboard
     workflow: '{project-root}/.bmad/workflows/create-dynatrace-dashboard.yaml'
@@ -281,6 +281,32 @@ menu:
   - trigger: dt-synthetic-monitoring
     action: '#dtctl-synthetic-monitoring'
     description: "🤖 Configure synthetic monitors and browser tests"
+
+  # MCP-POWERED DYNATRACE FEATURES (requires Dynatrace MCP server)
+  # ═══════════════════════════════════════════════════════════════
+  - trigger: build-project-dashboard
+    workflow: '{project-root}/.bmad/workflows/build-project-dashboard.yaml'
+    description: "📊 Build dashboard with key project metrics (MCP-powered)"
+
+  - trigger: build-diagnostic-notebook
+    workflow: '{project-root}/.bmad/workflows/build-diagnostic-notebook.yaml'
+    description: "📓 Build diagnostic notebook for service troubleshooting (MCP-powered)"
+
+  - trigger: suggest-workflows
+    workflow: '{project-root}/.bmad/workflows/suggest-dynatrace-workflows.yaml'
+    description: "🤖 Analyze environment and suggest automation workflows (MCP-powered)"
+
+  - trigger: discover-services
+    action: '#mcp-discover-services'
+    description: "🔍 Discover services and entities in Dynatrace (MCP-powered)"
+
+  - trigger: discover-metrics
+    action: '#mcp-discover-metrics'
+    description: "📈 Discover available metrics for your services (MCP-powered)"
+
+  - trigger: analyze-logs
+    action: '#mcp-analyze-logs'
+    description: "📋 Analyze log patterns and attributes (MCP-powered)"
 
 prompts:
   # NOTE: This file contains Parts 1-5
@@ -362,7 +388,7 @@ prompts:
 
         dynatrace:
           integrated: {true/false}
-          monaco_configured: {true/false}
+          dtctl_configured: {true/false}
           dashboards_created: {number}
 
       ## Actions Completed This Session
@@ -1120,7 +1146,7 @@ prompts:
       **Triggers:**
       - "Set up Dynatrace"
       - "Create Dynatrace dashboard"
-      - "Dynatrace Monaco"
+      - "Dynatrace dtctl"
       - "DQL query"
       - "Dynatrace workflow"
       
@@ -1131,7 +1157,7 @@ prompts:
       I'll help you with Dynatrace configuration!
       
       For dashboards: *create-dt-dashboard
-      For Monaco setup: *setup-dynatrace
+      For dtctl setup: *setup-dynatrace
       For workflows: *create-dt-workflow
       
       What do you need? [workflow begins]
@@ -2516,26 +2542,31 @@ Validation:
       6. When to escalate
       
       ## 6. Dynatrace-Specific Best Practices
-      
-      ### Use Monaco for Config as Code
-      
-      **Why:** Version control, reproducibility, automation
-      
+
+      ### Use dtctl for Config as Code
+
+      **Why:** Version control, reproducibility, automation, kubectl-style UX
+
       **✅ DO:**
 ```bash
-      # All Dynatrace config in Git
+      # Store Dynatrace config as YAML in Git
       dynatrace-config/
-      ├── environments.yaml
-      ├── manifest.yaml
-      └── projects/
-          └── default/
-              ├── dashboards/
-              ├── slos/
-              ├── alerting/
-              └── workflows/
-      
+      ├── dashboards/
+      │   └── red-metrics.yaml
+      ├── workflows/
+      │   └── auto-remediation.yaml
+      ├── slos/
+      │   └── availability.yaml
+      └── alerting/
+          └── critical.yaml
+
+      # Configure contexts for multiple environments
+      dtctl config set-context production \
+        --environment "https://prod.apps.dynatrace.com" \
+        --token-ref prod-token
+
       # Deploy via CI/CD
-      monaco deploy --environments production
+      dtctl apply -f dashboards/ --context production
 ```
       
       **❌ DON'T:**
@@ -4149,19 +4180,19 @@ Validation:
       kubectl get secrets -l app=otelcol --show-labels
       ```
 
-      ## Export Dynatrace Config (Monaco)
+      ## Export Dynatrace Config (dtctl)
       ```bash
-      monaco download \
-        --environment-url "${DT_URL}" \
-        --token "${DT_TOKEN}" \
-        --output-folder ./dynatrace-config
+      # List all dashboards
+      dtctl get dashboards -o yaml > dashboards-backup.yaml
 
-      # Selective download
-      monaco download \
-        --environment-url "${DT_URL}" \
-        --token "${DT_TOKEN}" \
-        --specific-apis "dashboard,alerting-profile" \
-        --output-folder ./dynatrace-config
+      # Get specific dashboard
+      dtctl get dashboard "my-dashboard" -o yaml > my-dashboard.yaml
+
+      # List all workflows
+      dtctl get workflows -o yaml > workflows-backup.yaml
+
+      # Get SLOs
+      dtctl get slos -o yaml > slos-backup.yaml
       ```
 
       ## Generate Helm Values
@@ -5666,115 +5697,108 @@ Validation:
 
   - id: dtctl-setup
     content: |
-      Set up Dynatrace integration and Monaco (configuration as code).
-      
-      ## Step 1: Install Monaco
+      Set up Dynatrace integration using dtctl (kubectl-style CLI for Dynatrace).
+
+      ## Step 1: Install dtctl
 ```bash
-      # macOS
-      brew install dynatrace/dynatrace/monaco
-      
-      # Linux
-      wget https://github.com/dynatrace/dynatrace-configuration-as-code/releases/latest/download/monaco-linux-amd64
-      chmod +x monaco-linux-amd64
-      sudo mv monaco-linux-amd64 /usr/local/bin/monaco
-      
-      # Windows
-      # Download from: https://github.com/dynatrace/dynatrace-configuration-as-code/releases
-      
+      # Download from releases
+      # https://github.com/dynatrace-oss/dtctl/releases/latest
+
+      # macOS/Linux - download and install binary
+      curl -LO https://github.com/dynatrace-oss/dtctl/releases/latest/download/dtctl-$(uname -s | tr '[:upper:]' '[:lower:]')-amd64
+      chmod +x dtctl-*
+      sudo mv dtctl-* /usr/local/bin/dtctl
+
       # Verify installation
-      monaco version
+      dtctl version
+
+      # Enable shell completion (optional)
+      dtctl completion bash > /etc/bash_completion.d/dtctl
+      # or for zsh
+      dtctl completion zsh > "${fpath[1]}/_dtctl"
 ```
-      
+
       ## Step 2: Create Project Structure
 ```bash
       mkdir -p dynatrace-config
       cd dynatrace-config
-      
+
       # Create directory structure
-      mkdir -p projects/default/{dashboards,notebooks,workflows,alerting,synthetic,auto-tags,management-zones}
+      mkdir -p {dashboards,notebooks,workflows,alerting,slos,synthetic}
 ```
-      
-      ## Step 3: Configure Environments
-```yaml
-      # environments.yaml
-      development:
-        name: "Development"
-        url:
-          type: environment
-          value: "https://abc12345.live.dynatrace.com"
-        auth:
-          token:
-            type: environment
-            name: DT_DEV_TOKEN
-      
-      staging:
-        name: "Staging"
-        url:
-          type: environment
-          value: "https://def67890.live.dynatrace.com"
-        auth:
-          token:
-            type: environment
-            name: DT_STAGING_TOKEN
-      
-      production:
-        name: "Production"
-        url:
-          type: environment
-          value: "https://ghi11121.live.dynatrace.com"
-        auth:
-          token:
-            type: environment
-            name: DT_PROD_TOKEN
+
+      ## Step 3: Configure Contexts (Multiple Environments)
+```bash
+      # Configure development environment
+      dtctl config set-context development \
+        --environment "https://abc12345.apps.dynatrace.com" \
+        --token-ref dev-token
+      dtctl config set-credentials dev-token --token "dt0s16.DEV_TOKEN_HERE"
+
+      # Configure staging environment
+      dtctl config set-context staging \
+        --environment "https://def67890.apps.dynatrace.com" \
+        --token-ref staging-token
+      dtctl config set-credentials staging-token --token "dt0s16.STAGING_TOKEN_HERE"
+
+      # Configure production environment
+      dtctl config set-context production \
+        --environment "https://ghi11121.apps.dynatrace.com" \
+        --token-ref prod-token
+      dtctl config set-credentials prod-token --token "dt0s16.PROD_TOKEN_HERE"
+
+      # List configured contexts
+      dtctl config get-contexts
+
+      # Switch to a context
+      dtctl config use-context development
 ```
-      
+
       ## Step 4: Create API Tokens
 ```bash
-      # Required token scopes:
-      # - Read configuration
-      # - Write configuration
-      # - Read settings
-      # - Write settings
-      # - Read SLO
-      # - Write SLO
-      
-      # Set environment variables
-      export DT_DEV_TOKEN="dt0c01.xxx..."
-      export DT_STAGING_TOKEN="dt0c01.yyy..."
-      export DT_PROD_TOKEN="dt0c01.zzz..."
+      # Required token scopes (see: https://github.com/dynatrace-oss/dtctl#token-scopes):
+      # For read-only operations:
+      # - Read settings, Read SLO, Read configuration
+      # For write operations:
+      # - Write settings, Write SLO, Write configuration
+      # For automation:
+      # - Automation workflows read/write
+
+      # Tokens are stored securely in dtctl credentials
 ```
-      
-      ## Step 5: Initialize Manifest
-```yaml
-      # manifest.yaml
-      manifestVersion: "1.0"
-      
-      projects:
-        - name: default
-          path: projects/default
-      
-      environmentGroups:
-        - name: all
-          environments:
-            - name: development
-            - name: staging
-            - name: production
-```
-      
-      ## Step 6: Validate Configuration
+
+      ## Step 5: Verify Connection
 ```bash
-      # Dry-run validation
-      monaco deploy --dry-run --environments environments.yaml manifest.yaml
-      
-      # Deploy to development
-      monaco deploy --environments environments.yaml manifest.yaml development
+      # Test connection
+      dtctl get workflows
+
+      # List dashboards
+      dtctl get dashboards
+
+      # Run a simple DQL query
+      dtctl query "fetch logs | limit 5"
 ```
-      
-      Generate complete Dynatrace + Monaco setup.
+
+      ## Step 6: Deploy Configuration
+```bash
+      # Apply configuration from file
+      dtctl apply -f dashboard.yaml
+
+      # Apply all files in directory
+      dtctl apply -f dashboards/
+
+      # Dry-run to validate before applying
+      dtctl apply -f workflow.yaml --dry-run
+
+      # Apply to specific context
+      dtctl apply -f dashboard.yaml --context production
+```
+
+      Generate complete Dynatrace + dtctl setup.
 
   - id: dtctl-create-dashboard
     content: |
-      Create Dynatrace dashboard using Monaco configuration as code.
+      Create Dynatrace dashboard using dtctl configuration as code.
       
       ## Dashboard Templates
       
@@ -5912,38 +5936,40 @@ Validation:
       }
 ```
       
-      ## Monaco Configuration
+      ## dtctl Dashboard YAML
 ```yaml
-      # projects/default/dashboards/config.yaml
-      config:
-        - red-metrics:
-            - name: "RED Metrics - {{ .Env.SERVICE_NAME }}"
-          
-        - kubernetes-overview:
-            - name: "K8s Cluster - {{ .Env.CLUSTER_NAME }}"
-      
-      red-metrics:
-        - name: "{{ .name }}"
-          template: red-metrics.json
-          skip: false
-      
-      kubernetes-overview:
-        - name: "{{ .name }}"
-          template: kubernetes-dashboard.json
-          skip: false
+      # dashboards/red-metrics.yaml
+      apiVersion: platform.dynatrace.com/v1
+      kind: Dashboard
+      metadata:
+        name: red-metrics-payment-service
+      spec:
+        dashboardMetadata:
+          name: "RED Metrics - Payment Service"
+          shared: true
+          owner: "platform-team"
+        tiles:
+          # Add tiles from JSON template above
 ```
-      
+
       ## Deploy Dashboard
 ```bash
-      # Deploy to development
-      SERVICE_NAME="payment-service" \
-        monaco deploy --environments environments.yaml manifest.yaml development
-      
+      # Deploy to development context
+      dtctl apply -f dashboards/red-metrics.yaml --context development
+
       # Deploy to all environments
-      monaco deploy --environments environments.yaml manifest.yaml
+      for ctx in development staging production; do
+        dtctl apply -f dashboards/ --context $ctx
+      done
+
+      # Get deployed dashboard
+      dtctl get dashboard "red-metrics-payment-service" -o yaml
+
+      # Edit dashboard interactively
+      dtctl edit dashboard "red-metrics-payment-service"
 ```
-      
-      Generate dashboard JSON and Monaco configuration.
+
+      Generate dashboard JSON and dtctl configuration.
 
   - id: dtctl-create-notebook
     content: |
@@ -6043,11 +6069,11 @@ Validation:
 
   - id: dtctl-export-config
     content: |
-      Export Dynatrace configuration as code using Monaco.
-      
+      Export Dynatrace configuration as code using dtctl.
+
       Export all configuration types:
       - Dashboards
-      - Notebooks  
+      - Notebooks
       - Alerting profiles
       - Management zones
       - SLOs
@@ -6055,41 +6081,60 @@ Validation:
       - Workflows
       - Auto-tags
 ```bash
-      # Download all configuration
-      monaco download \
-        --environment-url "https://abc12345.live.dynatrace.com" \
-        --token "$DT_TOKEN" \
-        --output-folder ./backup-$(date +%Y%m%d)
-      
-      # Convert to parameterized Monaco config
-      monaco convert \
-        --source ./backup-20250117 \
-        --target ./dynatrace-config/projects/default
+      # Export all dashboards
+      dtctl get dashboards -o yaml > backup-$(date +%Y%m%d)/dashboards.yaml
+
+      # Export all workflows
+      dtctl get workflows -o yaml > backup-$(date +%Y%m%d)/workflows.yaml
+
+      # Export all SLOs
+      dtctl get slos -o yaml > backup-$(date +%Y%m%d)/slos.yaml
+
+      # Export specific dashboard by name
+      dtctl get dashboard "my-dashboard" -o yaml > dashboards/my-dashboard.yaml
+
+      # Describe a workflow in detail
+      dtctl describe workflow "auto-remediation"
+
+      # Export settings objects
+      dtctl get settings-objects --schema "builtin:alerting.profile" -o yaml
 ```
-      
+
       Generate backup and version control workflow.
 
   - id: dtctl-validate-config
     content: |
       Validate Dynatrace configuration before deployment.
-      
+
       Validation steps:
-      1. Monaco dry-run deployment
-      2. JSON schema validation
+      1. dtctl dry-run deployment
+      2. YAML schema validation
       3. Lint for common issues (hardcoded values, deprecated APIs)
       4. Pre-deployment checks (connectivity, token permissions)
       5. CI/CD validation pipeline
 ```bash
-      # Validate configuration
-      monaco deploy --dry-run --environments environments.yaml manifest.yaml
-      
-      # Check for issues
-      - Hardcoded environment URLs
-      - Missing required fields
-      - Deprecated metric keys
-      - Invalid DQL syntax
+      # Dry-run to validate without applying
+      dtctl apply -f dashboard.yaml --dry-run
+
+      # Validate all files in directory
+      dtctl apply -f dashboards/ --dry-run
+
+      # Test DQL queries before deployment
+      dtctl query "fetch logs | limit 1" --dry-run
+
+      # Check for issues:
+      # - Hardcoded environment URLs
+      # - Missing required fields
+      # - Deprecated metric keys
+      # - Invalid DQL syntax
+
+      # Verify current context
+      dtctl config current-context
+
+      # Test token permissions
+      dtctl get workflows  # Should succeed if token has read access
 ```
-      
+
       Generate validation report with actionable fixes.
 
   - id: dtctl-synthetic-monitoring
@@ -6148,4 +6193,265 @@ Validation:
 ```
       
       Generate synthetic monitoring configuration with alerting.
+
+  # ═══════════════════════════════════════════════════════
+  # MCP-POWERED DISCOVERY & ANALYSIS PROMPTS
+  # ═══════════════════════════════════════════════════════
+
+  - id: mcp-discover-services
+    content: |
+      Discover services and entities in the Dynatrace environment using MCP.
+
+      ## Prerequisites
+      This feature requires the Dynatrace MCP server to be configured.
+      See installation docs for setup instructions.
+
+      ## Discovery Process
+
+      **Step 1: Check MCP Availability**
+      If Dynatrace MCP tools are available, use them directly.
+      If not, inform the user to configure the MCP server or use dtctl manually.
+
+      **Step 2: Discover Services**
+      Use the Dynatrace MCP execute_dql tool:
+      ```dql
+      fetch dt.entity.service
+      | fields entity.name, entity.type, tags
+      | sort entity.name
+      | limit 100
+      ```
+
+      **Step 3: Discover Hosts**
+      ```dql
+      fetch dt.entity.host
+      | fields entity.name, osType, hypervisorType
+      | sort entity.name
+      | limit 50
+      ```
+
+      **Step 4: Discover Kubernetes Entities**
+      ```dql
+      fetch dt.entity.cloud_application_namespace
+      | fields entity.name, clustered_by[dt.entity.kubernetes_cluster]
+      | limit 50
+      ```
+
+      **Step 5: Discover Process Groups**
+      ```dql
+      fetch dt.entity.process_group
+      | fields entity.name, technology, runs_on[dt.entity.host]
+      | limit 50
+      ```
+
+      ## Output Format
+      Present discovered entities in a structured format:
+      ```
+      ## Services (X found)
+      | Name | Type | Tags |
+      |------|------|------|
+      | ... | ... | ... |
+
+      ## Hosts (X found)
+      | Name | OS | Hypervisor |
+      |------|-----|------------|
+      | ... | ... | ... |
+      ```
+
+      Provide recommendations for dashboards, notebooks, or workflows based on discovered entities.
+
+  - id: mcp-discover-metrics
+    content: |
+      Discover available metrics for services using Dynatrace MCP.
+
+      ## Prerequisites
+      Requires Dynatrace MCP server to be configured.
+
+      ## Discovery Process
+
+      **Step 1: List Available Metric Keys**
+      ```dql
+      fetch dt.metrics
+      | filter contains(metric.key, "builtin:service")
+      | summarize count = count(), by: {metric.key}
+      | sort count desc
+      | limit 50
+      ```
+
+      **Step 2: Service-Specific Metrics**
+      For a specific service:
+      ```dql
+      fetch dt.metrics
+      | filter dt.entity.service == "SERVICE_NAME"
+      | summarize count = count(), by: {metric.key}
+      | sort count desc
+      | limit 30
+      ```
+
+      **Step 3: Custom Metrics**
+      ```dql
+      fetch dt.metrics
+      | filter not(startsWith(metric.key, "builtin:"))
+      | summarize count = count(), by: {metric.key}
+      | sort count desc
+      | limit 30
+      ```
+
+      ## Common Metric Categories
+
+      ### RED Metrics (Rate, Errors, Duration)
+      - `builtin:service.response.time` - Response time
+      - `builtin:service.errors.total.rate` - Error rate
+      - `builtin:service.requestCount.total` - Throughput
+
+      ### Resource Metrics
+      - `builtin:host.cpu.usage` - CPU utilization
+      - `builtin:host.mem.usage` - Memory utilization
+      - `builtin:containers.cpu.usagePercent` - Container CPU
+
+      ### Custom Business Metrics
+      Look for metrics prefixed with your application name.
+
+      ## Output Format
+      Present metrics grouped by category with:
+      - Metric key
+      - Description
+      - Suggested visualization type (graph, single value, heatmap)
+
+      Recommend which metrics to include in dashboards.
+
+  - id: mcp-analyze-logs
+    content: |
+      Analyze log patterns and attributes using Dynatrace MCP.
+
+      ## Prerequisites
+      Requires Dynatrace MCP server with log read permissions.
+
+      ## Analysis Process
+
+      **Step 1: Discover Log Sources**
+      ```dql
+      fetch logs
+      | summarize count = count(), by: {log.source}
+      | sort count desc
+      | limit 20
+      ```
+
+      **Step 2: Analyze Log Attributes**
+      For a specific service:
+      ```dql
+      fetch logs
+      | filter dt.entity.service == "SERVICE_NAME"
+      | limit 1
+      | fields *
+      ```
+      This reveals all available attributes for log filtering.
+
+      **Step 3: Error Pattern Analysis**
+      ```dql
+      fetch logs
+      | filter severity == "ERROR"
+      | summarize count = count(), by: {content}
+      | sort count desc
+      | limit 20
+      ```
+
+      **Step 4: Log Volume Analysis**
+      ```dql
+      fetch logs
+      | summarize count = count(), by: {bin(timestamp, 1h)}
+      | sort timestamp asc
+      ```
+
+      **Step 5: Trace Correlation**
+      ```dql
+      fetch logs
+      | filter isNotNull(trace_id)
+      | summarize count = count(), by: {dt.entity.service}
+      | sort count desc
+      ```
+
+      ## Output Format
+      Provide:
+      1. Summary of log sources and volumes
+      2. Common error patterns
+      3. Available attributes for filtering
+      4. Recommendations for log-based alerts
+      5. Suggested DQL queries for diagnostic notebooks
+
+      ## Sample Diagnostic Queries
+      Generate ready-to-use DQL queries for common investigations:
+      - Error spike analysis
+      - Latency correlation with logs
+      - Security event detection
+      - Deployment impact analysis
+
+  - id: mcp-check-availability
+    content: |
+      Check if Dynatrace MCP is available and configured.
+
+      ## Check Process
+
+      **Step 1: Verify MCP Tools**
+      Check if the following Dynatrace MCP tools are available:
+      - execute_dql - Execute DQL queries
+      - get_entity - Retrieve entity information
+      - list_problems - List active problems
+      - create_document - Create dashboards/notebooks
+
+      **Step 2: Test Connection**
+      If MCP tools are available, run a simple test query:
+      ```dql
+      fetch logs | limit 1
+      ```
+
+      **Step 3: Report Status**
+
+      If MCP is available:
+      ```
+      ✅ Dynatrace MCP is configured and working!
+
+      Available capabilities:
+      - Execute DQL queries
+      - Discover services and entities
+      - Analyze logs, metrics, and traces
+      - Create dashboards and notebooks
+      - List and manage workflows
+
+      You can now use MCP-powered features:
+      - *build-project-dashboard
+      - *build-diagnostic-notebook
+      - *suggest-workflows
+      - *discover-services
+      - *discover-metrics
+      - *analyze-logs
+      ```
+
+      If MCP is NOT available:
+      ```
+      ⚠️ Dynatrace MCP is not configured.
+
+      To enable AI-powered Dynatrace features, configure the MCP server:
+
+      1. Add to your AI assistant settings:
+         {
+           "mcpServers": {
+             "dynatrace": {
+               "command": "npx",
+               "args": ["-y", "@dynatrace-oss/dynatrace-mcp-server"],
+               "env": {
+                 "DT_ENVIRONMENT": "https://your-env.apps.dynatrace.com",
+                 "DT_PLATFORM_TOKEN": "dt0s16.YOUR_TOKEN"
+               }
+             }
+           }
+         }
+
+      2. Restart your AI assistant
+
+      3. Run *discover-services to verify
+
+      Alternative: Use dtctl commands manually:
+      - dtctl get dashboards
+      - dtctl query "fetch logs | limit 10"
+      ```
 

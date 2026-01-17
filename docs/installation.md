@@ -27,6 +27,9 @@ bmad-observability-agent/
 │       ├── setup-dynatrace.yaml
 │       ├── create-dynatrace-dashboard.yaml
 │       ├── create-dynatrace-workflow.yaml
+│       ├── build-project-dashboard.yaml
+│       ├── build-diagnostic-notebook.yaml
+│       ├── suggest-dynatrace-workflows.yaml
 │       └── validate-observability.yaml
 ├── docs/
 │   └── installation.md
@@ -108,11 +111,11 @@ Read the file .bmad/agents/o11y-engineer.agent.yaml and use it as your persona.
 
 | Metric | Value |
 |--------|-------|
-| Total Prompts | 37 |
-| Menu Commands | 44 |
-| Workflows | 10 |
-| File Size | ~196KB |
-| Lines | ~6,151 |
+| Total Prompts | 40 |
+| Menu Commands | 47 |
+| Workflows | 13 |
+| File Size | ~210KB |
+| Lines | ~6,500 |
 
 ### Prompt Categories
 
@@ -123,7 +126,7 @@ Read the file .bmad/agents/o11y-engineer.agent.yaml and use it as your persona.
 | Instrumentation | 9 | Auto/manual instrumentation, scoring |
 | Weaver (Semconv) | 5 | Docs, code gen, validation |
 | OCB (Collector) | 7 | Build custom collectors |
-| Dynatrace | 8 | Monaco automation |
+| Dynatrace | 11 | dtctl + MCP automation |
 
 ## Optional Dependencies
 
@@ -153,18 +156,107 @@ cargo install weaver-cli
 
 ### For Dynatrace Automation
 
-```bash
-# Install Monaco
-# macOS
-brew install dynatrace/dynatrace/monaco
+#### dtctl CLI (Required for applying configurations)
 
-# Linux
-wget https://github.com/dynatrace/dynatrace-configuration-as-code/releases/latest/download/monaco-linux-amd64
-chmod +x monaco-linux-amd64
-sudo mv monaco-linux-amd64 /usr/local/bin/monaco
+```bash
+# Install dtctl (kubectl-style CLI for Dynatrace)
+# Download from releases
+# https://github.com/dynatrace-oss/dtctl/releases/latest
+
+# macOS/Linux - download and install binary
+curl -LO https://github.com/dynatrace-oss/dtctl/releases/latest/download/dtctl-$(uname -s | tr '[:upper:]' '[:lower:]')-amd64
+chmod +x dtctl-*
+sudo mv dtctl-* /usr/local/bin/dtctl
 
 # Verify
-monaco version
+dtctl version
+
+# Configure your environment
+dtctl config set-context my-env \
+  --environment "https://abc12345.apps.dynatrace.com" \
+  --token-ref my-token
+dtctl config set-credentials my-token --token "dt0s16.YOUR_TOKEN"
+```
+
+#### Dynatrace MCP Server (Recommended for AI-powered features)
+
+The Dynatrace MCP server enables the agent to discover your environment and generate context-aware DQL queries, dashboards, notebooks, and workflows.
+
+**Benefits:**
+- Discovers actual services, metrics, and entities in your environment
+- Generates accurate DQL queries based on real data schema
+- Creates dashboards with metrics that exist in your environment
+- Builds diagnostic notebooks with relevant log/trace attributes
+
+**Installation:**
+
+For **Claude Code** (`~/.claude/settings.json`):
+```json
+{
+  "mcpServers": {
+    "dynatrace": {
+      "command": "npx",
+      "args": ["-y", "@dynatrace-oss/dynatrace-mcp-server"],
+      "env": {
+        "DT_ENVIRONMENT": "https://abc12345.apps.dynatrace.com",
+        "DT_PLATFORM_TOKEN": "dt0s16.YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+For **Cursor** (`~/.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "dynatrace": {
+      "command": "npx",
+      "args": ["-y", "@dynatrace-oss/dynatrace-mcp-server"],
+      "env": {
+        "DT_ENVIRONMENT": "https://abc12345.apps.dynatrace.com",
+        "DT_PLATFORM_TOKEN": "dt0s16.YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+For **VS Code** (`.vscode/mcp.json` in your project):
+```json
+{
+  "servers": {
+    "dynatrace": {
+      "command": "npx",
+      "args": ["-y", "@dynatrace-oss/dynatrace-mcp-server"],
+      "env": {
+        "DT_ENVIRONMENT": "https://abc12345.apps.dynatrace.com",
+        "DT_PLATFORM_TOKEN": "dt0s16.YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+**Required Token Scopes:**
+- `app-engine:apps:run` (required)
+- `storage:logs:read` (for log queries)
+- `storage:metrics:read` (for metric queries)
+- `storage:spans:read` (for trace queries)
+- `storage:entities:read` (for entity discovery)
+- `document:documents:read` (for existing dashboards/notebooks)
+- `automation:workflows:read` (for workflow discovery)
+
+**Optional Environment Variables:**
+- `DT_GRAIL_QUERY_BUDGET_GB`: Limit data scanning (default: unlimited)
+
+**Verify MCP Connection:**
+```
+# In your AI assistant, ask:
+"List the services monitored in Dynatrace"
+
+# If MCP is working, it will query your environment
+# If not configured, it will provide generic guidance
 ```
 
 ## Updating

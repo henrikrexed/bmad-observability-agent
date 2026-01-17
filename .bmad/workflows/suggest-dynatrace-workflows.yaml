@@ -1,0 +1,239 @@
+name: Suggest Dynatrace Workflows
+version: 1.0.0
+description: Analyze your environment and suggest automation workflows (MCP-powered)
+
+steps:
+  - step: analyze-environment
+    prompt: |
+      Use Dynatrace MCP to analyze the environment for workflow opportunities.
+
+      **If MCP is available:**
+
+      1. Find recent problems:
+      ```dql
+      fetch events
+      | filter event.type == "PROBLEM"
+      | sort timestamp desc
+      | summarize count(), by: {event.name, affected_entity_type}
+      | sort count() desc
+      | limit 20
+      ```
+
+      2. Identify recurring issues:
+      ```dql
+      fetch events
+      | filter event.type == "PROBLEM"
+      | filter timestamp > now() - 7d
+      | summarize occurrences = count(), by: {event.name}
+      | filter occurrences > 3
+      | sort occurrences desc
+      ```
+
+      3. Find services with high error rates:
+      ```dql
+      fetch dt.entity.service
+      | lookup [
+          fetch metrics
+          | filter metric.key == "builtin:service.errors.total.rate"
+          | summarize avg = avg(value), by: {dt.entity.service}
+        ], on: entity.id
+      | filter avg > 0.01
+      | sort avg desc
+      ```
+
+      4. Check for resource constraints:
+      ```dql
+      fetch events
+      | filter event.type == "RESOURCE_CONTENTION"
+         or contains(event.name, "OOM")
+         or contains(event.name, "CPU")
+      | sort timestamp desc
+      | limit 20
+      ```
+
+      **If MCP is not available:**
+      Ask the user about:
+      - Common incidents they experience
+      - Services with frequent issues
+      - Current manual remediation steps
+
+      Identify patterns that would benefit from automation.
+
+    save_to: environment_analysis
+
+  - step: suggest-workflows
+    prompt: |
+      Based on the environment analysis, suggest relevant workflows.
+
+      Analysis: {{environment_analysis}}
+
+      ## Workflow Categories
+
+      ### 1. Auto-Remediation Workflows
+      For recurring problems that have known fixes:
+
+      - **Pod Restart on OOMKilled**
+        Trigger: Problem with root cause "Container OOMKilled"
+        Action: Delete pod to trigger restart with fresh memory
+
+      - **Scale Up on High Latency**
+        Trigger: P95 latency > threshold for 5 minutes
+        Action: Increase replica count via Kubernetes API
+
+      - **Clear Cache on Memory Pressure**
+        Trigger: Memory utilization > 85%
+        Action: Call cache clear endpoint
+
+      - **Rollback on Error Spike**
+        Trigger: Error rate > 5% after deployment
+        Action: Trigger rollback via CI/CD API
+
+      ### 2. Incident Response Workflows
+      For problems requiring human attention:
+
+      - **Create Jira Ticket**
+        Trigger: Problem opened
+        Action: Create ticket with problem details and affected entities
+
+      - **Slack Notification**
+        Trigger: Problem with severity CRITICAL
+        Action: Post to incident channel with runbook link
+
+      - **PagerDuty Alert**
+        Trigger: SLO breach
+        Action: Create PagerDuty incident
+
+      - **Gather Diagnostics**
+        Trigger: Problem opened
+        Action: Collect logs, traces, metrics and attach to ticket
+
+      ### 3. Scheduled Workflows
+      For proactive maintenance:
+
+      - **Daily SLO Report**
+        Schedule: Daily at 9am
+        Action: Generate SLO compliance report, send to Slack
+
+      - **Weekly Capacity Review**
+        Schedule: Weekly on Monday
+        Action: Analyze resource trends, predict capacity needs
+
+      - **Certificate Expiry Check**
+        Schedule: Daily
+        Action: Check SSL certs expiring in 30 days, alert if found
+
+      Present top 5 recommended workflows based on the analysis.
+
+    save_to: workflow_suggestions
+
+  - step: select-workflow
+    ask: |
+      Based on your environment, here are the recommended workflows:
+
+      {{workflow_suggestions}}
+
+      Which workflow would you like to create?
+      (Select by number or describe a custom workflow)
+
+      Also provide:
+      - Notification channel (Slack webhook URL, email, etc.):
+      - Escalation policy:
+      - Test in dry-run first? (yes/no):
+
+    save_to: selected_workflow
+
+  - step: generate-workflow
+    prompt: |
+      Generate the selected Dynatrace workflow YAML.
+
+      Selection: {{selected_workflow}}
+
+      ## Workflow YAML Structure
+
+      ```yaml
+      # workflows/{{workflow_name}}.yaml
+      apiVersion: automation.dynatrace.com/v1
+      kind: Workflow
+      metadata:
+        name: {{workflow_name}}
+        description: {{workflow_description}}
+      spec:
+        trigger:
+          # Event-based trigger
+          eventTrigger:
+            type: problem
+            filter:
+              problemType: "{{problem_type}}"
+          # OR Schedule-based trigger
+          schedule:
+            cron: "0 9 * * *"
+            timezone: "UTC"
+
+        tasks:
+          - name: gather-context
+            type: dql
+            input:
+              query: |
+                fetch events
+                | filter event.id == "{{trigger.event.id}}"
+
+          - name: execute-remediation
+            type: http
+            input:
+              url: "{{remediation_endpoint}}"
+              method: POST
+              body: |
+                {
+                  "action": "{{action}}",
+                  "target": "{{trigger.affected_entity}}"
+                }
+            condition: "{{tasks.gather-context.result.severity}} == 'CRITICAL'"
+
+          - name: notify-team
+            type: slack
+            input:
+              channel: "{{slack_channel}}"
+              message: |
+                :rotating_light: Workflow Executed
+                Problem: {{trigger.event.name}}
+                Action: {{action}}
+                Status: {{tasks.execute-remediation.result.status}}
+
+          - name: update-ticket
+            type: jira
+            input:
+              action: comment
+              issueKey: "{{tasks.create-ticket.result.key}}"
+              comment: "Auto-remediation executed: {{action}}"
+
+        errorHandling:
+          retry:
+            maxRetries: 3
+            backoffMultiplier: 2
+          onFailure:
+            - name: alert-on-failure
+              type: slack
+              input:
+                channel: "#incidents"
+                message: "Workflow {{workflow_name}} failed: {{error.message}}"
+      ```
+
+      ## Deployment Commands
+      ```bash
+      # Validate workflow
+      dtctl apply -f workflows/{{workflow_name}}.yaml --dry-run
+
+      # Deploy workflow
+      dtctl apply -f workflows/{{workflow_name}}.yaml
+
+      # List workflows
+      dtctl get workflows
+
+      # Test workflow manually
+      dtctl execute workflow "{{workflow_name}}"
+
+      # Check execution history
+      dtctl history workflow "{{workflow_name}}"
+      ```
+
+      Generate the complete workflow YAML file with proper error handling and notifications.

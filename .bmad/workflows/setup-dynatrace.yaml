@@ -1,64 +1,78 @@
 name: Setup Dynatrace
 version: 1.0.0
-description: Configure Dynatrace integration using Monaco
+description: Configure Dynatrace integration using dtctl
 
 steps:
-  - step: install-monaco
+  - step: install-dtctl
     prompt: |
-      Install Dynatrace Monaco (configuration as code tool):
-      
-      # macOS
-      brew install dynatrace/dynatrace/monaco
-      
-      # Linux
-      wget https://github.com/dynatrace/dynatrace-configuration-as-code/releases/latest/download/monaco-linux-amd64
-      chmod +x monaco-linux-amd64
-      sudo mv monaco-linux-amd64 /usr/local/bin/monaco
-      
+      Install dtctl (kubectl-style CLI for Dynatrace):
+
+      # Download from releases
+      # https://github.com/dynatrace-oss/dtctl/releases/latest
+
+      # macOS/Linux
+      curl -LO https://github.com/dynatrace-oss/dtctl/releases/latest/download/dtctl-$(uname -s | tr '[:upper:]' '[:lower:]')-amd64
+      chmod +x dtctl-*
+      sudo mv dtctl-* /usr/local/bin/dtctl
+
       # Verify
-      monaco version
-      
+      dtctl version
+
+      # Enable shell completion (optional)
+      dtctl completion bash > /etc/bash_completion.d/dtctl
+
       Provide installation commands for user's OS.
 
-  - step: configure-environments
+  - step: configure-contexts
     ask: |
       Dynatrace environment details:
-      
+
       **Development:**
-      - Environment URL: https://[your-id].live.dynatrace.com
-      - API Token: (will be set as env var DT_DEV_TOKEN)
-      
+      - Environment URL: https://[your-id].apps.dynatrace.com
+      - API Token: (will be stored as dtctl credential)
+
       **Staging:**
       - Environment URL:
-      - API Token: (env var DT_STAGING_TOKEN)
-      
+      - API Token:
+
       **Production:**
       - Environment URL:
-      - API Token: (env var DT_PROD_TOKEN)
-      
+      - API Token:
+
       Required token scopes:
       - Read/Write configuration
       - Read/Write settings
       - Read/Write SLO
-    
+      - Automation workflows read/write
+
     save_to: dt_environments
 
   - step: create-project-structure
     prompt: |
-      Create Monaco project structure with:
-      
+      Create dtctl project structure with:
+
       {{dt_environments}}
-      
+
       Generate:
-      1. environments.yaml
-      2. manifest.yaml
-      3. Project directories:
+      1. Context configuration commands for each environment
+      2. Project directories:
          - dashboards/
          - notebooks/
          - workflows/
          - alerting/
+         - slos/
          - synthetic/
-         - management-zones/
-      
-      Provide complete directory structure and config files.
 
+      Example commands:
+      ```bash
+      # Configure contexts
+      dtctl config set-context development \
+        --environment "https://abc12345.apps.dynatrace.com" \
+        --token-ref dev-token
+      dtctl config set-credentials dev-token --token "dt0s16.YOUR_DEV_TOKEN"
+
+      # Verify connection
+      dtctl get workflows
+      ```
+
+      Provide complete setup commands and directory structure.

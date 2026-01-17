@@ -15,7 +15,8 @@ The B-MAD Observability Agent is an AI-powered expert that helps you build produ
 - **🎯 Instrumentation**: Configure auto-instrumentation and semantic conventions
 - **🏗️ Custom Builds**: Build optimized collector distributions with OCB
 - **📋 Semantic Conventions**: Create, validate, and manage conventions with Weaver
-- **🔧 Dynatrace Integration**: Full automation with Monaco (dashboards, workflows, alerting)
+- **🔧 Dynatrace Integration**: Full automation with dtctl (dashboards, workflows, alerting)
+- **🤖 MCP-Powered Discovery**: AI-driven environment discovery and context-aware DQL generation
 - **✅ Quality Checks**: Automated validation and issue remediation
 
 ## 🚀 Quick Start
@@ -119,6 +120,9 @@ Score: 0-100 with actionable recommendations
 | `*build-collector-distro` | Build custom collector with OCB | 2-4 hours |
 | `*validate-semconv` | Validate against semantic conventions | 1 hour |
 | `*create-dt-dashboard` | Create Dynatrace dashboard as code | 30 min |
+| `*build-project-dashboard` | Build dashboard with discovered metrics (MCP) | 15 min |
+| `*build-diagnostic-notebook` | Build diagnostic notebook (MCP) | 15 min |
+| `*suggest-workflows` | AI-suggested automation workflows (MCP) | 10 min |
 
 ## 💡 Use Cases
 
@@ -200,13 +204,31 @@ handoff:
 - Documentation generation
 
 ### Dynatrace Automation
-- Monaco configuration as code
+- dtctl (kubectl-style CLI) configuration as code
 - Dashboard creation and management
 - Notebook generation
 - Workflow automation (auto-remediation, incident response)
 - DQL query execution
 - SLO and alerting configuration
 - Synthetic monitoring
+
+### MCP-Powered Features (Recommended)
+With the [Dynatrace MCP server](https://github.com/dynatrace-oss/dynatrace-mcp), the agent can:
+- **Discover your environment** - Find actual services, hosts, and entities
+- **Generate context-aware DQL** - Queries use real metric names and attributes
+- **Build smart dashboards** - Based on metrics that exist in your environment
+- **Create diagnostic notebooks** - With log/trace attributes from your data
+- **Suggest workflows** - Based on recurring problems and patterns
+
+```bash
+# MCP-powered commands
+*discover-services       # Find services in Dynatrace
+*discover-metrics        # Find available metrics
+*analyze-logs           # Analyze log patterns
+*build-project-dashboard # Build dashboard with real metrics
+*build-diagnostic-notebook # Build troubleshooting notebook
+*suggest-workflows       # Get AI-suggested automations
+```
 
 ## 📊 Example Output
 ```
@@ -261,7 +283,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [isiobservable YouTube Channel](https://youtube.com/@isiobservable) - OpenTelemetry tutorials and deep dives
 - [B-MAD Documentation](http://docs.bmad-method.org)
 - [OpenTelemetry Documentation](https://opentelemetry.io/docs/)
-- [Dynatrace Monaco Documentation](https://github.com/dynatrace/dynatrace-configuration-as-code)
+- [Dynatrace dtctl Documentation](https://github.com/dynatrace-oss/dtctl)
+- [Dynatrace MCP Server](https://github.com/dynatrace-oss/dynatrace-mcp)
 
 ---
 

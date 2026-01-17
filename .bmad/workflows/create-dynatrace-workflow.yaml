@@ -6,60 +6,60 @@ steps:
   - step: choose-workflow-type
     ask: |
       What type of workflow do you need?
-      
+
       1. **Auto-Remediation**
          - Restart failing pods
          - Scale up overloaded services
          - Clear caches
          - Rollback deployments
-      
+
       2. **Incident Response**
          - Create tickets (Jira, ServiceNow)
          - Notify teams (Slack, PagerDuty)
          - Create war rooms
          - Gather diagnostics
-      
+
       3. **Scheduled Reports**
          - Daily SLO compliance
          - Weekly performance reports
          - Cost analysis
-      
+
       4. **Deployment Validation**
          - Post-deployment health checks
          - Performance validation
          - Auto-rollback on issues
-      
+
       5. **Security Response**
          - Block malicious IPs
          - Rotate credentials
          - Isolate services
-    
+
     save_to: workflow_type
 
   - step: define-trigger
     ask: |
       How should this workflow be triggered?
-      
+
       **Event-based:**
       - Problem detected
       - Anomaly detected
       - Threshold exceeded
       - Deployment event
-      
+
       **Schedule-based:**
       - Daily at X time
       - Weekly on X day
       - Every X hours
-      
+
       **Manual:**
       - On-demand execution
-    
+
     save_to: trigger_config
 
   - step: design-workflow
     ask: |
       Define workflow tasks (in order):
-      
+
       Available task types:
       - JavaScript code
       - DQL query
@@ -69,28 +69,42 @@ steps:
       - Call PagerDuty
       - Update ServiceNow
       - Run kubectl command
-      
+
       For each task provide:
       - Task name
       - Type
       - Configuration/code
       - Error handling
-    
+
     save_to: workflow_tasks
 
   - step: generate-workflow
     prompt: |
-      Generate Dynatrace workflow JSON for:
-      
+      Generate Dynatrace workflow YAML for dtctl:
+
       Type: {{workflow_type}}
       Trigger: {{trigger_config}}
       Tasks: {{workflow_tasks}}
-      
+
       Include:
       - Complete workflow definition
       - Error handling
       - Retry logic
       - Notifications
-      - Monaco configuration
+      - dtctl deployment commands
       - Testing procedure
 
+      Deployment commands:
+      ```bash
+      # Apply workflow
+      dtctl apply -f workflow.yaml
+
+      # Verify deployment
+      dtctl get workflows
+
+      # Execute workflow manually
+      dtctl execute workflow "workflow-name"
+
+      # Check execution history
+      dtctl history workflow "workflow-name"
+      ```

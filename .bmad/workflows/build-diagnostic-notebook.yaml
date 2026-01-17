@@ -1,0 +1,155 @@
+name: Build Diagnostic Notebook
+version: 1.0.0
+description: Build a Dynatrace notebook for service diagnosis using logs, metrics, and spans (MCP-powered)
+
+steps:
+  - step: select-service
+    ask: |
+      Which service do you want to create a diagnostic notebook for?
+
+      Provide:
+      - Service name:
+      - Notebook purpose: (Incident Analysis / Performance Investigation / General Diagnosis)
+      - Time range focus: (Last hour / Last day / Custom)
+
+    save_to: service_context
+
+  - step: discover-data-schema
+    prompt: |
+      Use Dynatrace MCP to discover the data schema for the selected service.
+
+      **If MCP is available:**
+
+      1. Discover log attributes:
+      ```dql
+      fetch logs
+      | filter dt.entity.service == "{{service_name}}"
+      | limit 1
+      | fields *
+      ```
+
+      2. Discover span attributes:
+      ```dql
+      fetch spans
+      | filter dt.entity.service == "{{service_name}}"
+      | limit 1
+      | fields *
+      ```
+
+      3. Discover available metrics:
+      ```dql
+      fetch dt.metrics
+      | filter contains(metric.key, "service")
+      | summarize count(), by: {metric.key}
+      | sort count() desc
+      | limit 20
+      ```
+
+      4. Check for recent problems:
+      ```dql
+      fetch events
+      | filter event.type == "PROBLEM"
+      | filter affected_entity_ids contains "{{service_name}}"
+      | sort timestamp desc
+      | limit 10
+      ```
+
+      **If MCP is not available:**
+      Use standard attributes:
+      - Logs: severity, content, log.source, trace_id
+      - Spans: span.name, span.kind, duration, status_code
+      - Metrics: response.time, error.rate, throughput
+
+      Document discovered schema for notebook generation.
+
+    save_to: data_schema
+
+  - step: generate-notebook
+    prompt: |
+      Generate a comprehensive Dynatrace diagnostic notebook YAML.
+
+      Service: {{service_context}}
+      Schema: {{data_schema}}
+
+      ## Notebook Structure
+
+      ### Section 1: Service Overview
+      - Markdown: Service description and SLIs
+      - DQL: Current health status
+      - DQL: Key metrics summary
+
+      ### Section 2: Error Analysis
+      - Markdown: How to investigate errors
+      - DQL: Error logs by severity
+      ```dql
+      fetch logs
+      | filter dt.entity.service == "{{service_name}}"
+      | filter severity == "ERROR" or severity == "WARN"
+      | sort timestamp desc
+      | limit 100
+      ```
+      - DQL: Error rate over time
+      - DQL: Top error messages
+
+      ### Section 3: Latency Analysis
+      - Markdown: Performance investigation guide
+      - DQL: Response time percentiles
+      ```dql
+      fetch spans
+      | filter dt.entity.service == "{{service_name}}"
+      | summarize p50 = percentile(duration, 50),
+                  p95 = percentile(duration, 95),
+                  p99 = percentile(duration, 99)
+      ```
+      - DQL: Slow transactions
+      - DQL: Latency by endpoint
+
+      ### Section 4: Dependency Analysis
+      - Markdown: Upstream/downstream impact
+      - DQL: Outbound calls
+      - DQL: Failed dependencies
+
+      ### Section 5: Resource Utilization
+      - Markdown: Infrastructure correlation
+      - DQL: CPU and memory metrics
+      - DQL: Thread/connection pool status
+
+      ### Section 6: Trace Deep Dive
+      - Markdown: How to analyze traces
+      - DQL: Sample traces with errors
+      - DQL: Distributed trace analysis
+
+      ### Section 7: Remediation Checklist
+      - Markdown: Common fixes and runbook steps
+
+      ## Output Format
+      Generate YAML file: `notebooks/{{service_name}}-diagnosis.yaml`
+
+      ```yaml
+      # notebooks/service-diagnosis.yaml
+      apiVersion: platform.dynatrace.com/v1
+      kind: Notebook
+      metadata:
+        name: {{service_name}}-diagnosis
+      spec:
+        sections:
+          - type: markdown
+            content: |
+              # {{service_name}} Diagnostic Notebook
+              ...
+          - type: dql
+            query: |
+              fetch logs
+              ...
+      ```
+
+      ## Deployment Commands
+      ```bash
+      # Apply notebook
+      dtctl apply -f notebooks/{{service_name}}-diagnosis.yaml
+
+      # List notebooks
+      dtctl get notebooks
+      ```
+
+      Generate the complete notebook YAML file.
