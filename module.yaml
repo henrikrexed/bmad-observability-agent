@@ -1,0 +1,97 @@
+# BMAD Module Definition - O11y Engineer
+# This file defines the module for the BMAD installer
+name: o11y
+version: 1.0.0
+displayName: "O11y Engineer"
+description: "Comprehensive OpenTelemetry observability expert specializing in collector configuration, instrumentation, semantic conventions, custom collector builds, and Dynatrace automation"
+author: "Henrik Rex (@henrikrexed)"
+repository: "https://github.com/henrikrexed/bmad-observability-agent"
+license: MIT
+
+# Module dependencies
+dependencies:
+  - core  # Requires BMAD Core module
+
+# Configuration variables (user will be prompted during install)
+variables:
+  observability_backend:
+    prompt: "What is your primary observability backend?"
+    type: select
+    options:
+      - Dynatrace
+      - Datadog
+      - New Relic
+      - Grafana Cloud
+      - Self-hosted (Prometheus/Grafana/Jaeger/Tempo)
+    default: Dynatrace
+
+  collector_deployment:
+    prompt: "How do you deploy OpenTelemetry Collector?"
+    type: select
+    options:
+      - Kubernetes DaemonSet
+      - Kubernetes Deployment (Gateway)
+      - Kubernetes Sidecar
+      - Docker Compose
+      - VM/Bare metal
+      - Not deployed yet
+    default: Kubernetes DaemonSet
+
+  primary_language:
+    prompt: "What is your primary application language?"
+    type: select
+    options:
+      - Java
+      - Python
+      - Node.js/TypeScript
+      - Go
+      - .NET
+      - Multiple/Mixed
+    default: Multiple/Mixed
+
+# Directories to create during installation
+directories:
+  - "{output_folder}/o11y-artifacts"
+  - "{output_folder}/collector-configs"
+  - "{output_folder}/dashboards"
+  - "{output_folder}/semconv-schemas"
+
+# Assets to install
+assets:
+  agents:
+    - source: agents/o11y-engineer.md
+      target: _bmad/o11y/agents/o11y-engineer.md
+
+  workflows:
+    - source: workflows/*.yaml
+      target: _bmad/o11y/workflows/
+
+  data:
+    - source: data/*
+      target: _bmad/o11y/data/
+      optional: true
+
+# IDE-specific configurations
+ide_configs:
+  claude-code:
+    commands_dir: .claude/commands/bmad/o11y
+    generate_commands: true
+
+  windsurf:
+    rules_file: .windsurfrules
+    append_rules: true
+
+  cursor:
+    rules_file: .cursorrules
+    append_rules: true
+
+# Post-install message
+post_install_message: |
+  🔭 O11y Engineer Module installed successfully!
+
+  Get started:
+    • Invoke agent: /bmad:o11y:agents:o11y-engineer
+    • Quick start:  /bmad:o11y:workflows:observability-quick-start
+    • Configure collector: /bmad:o11y:workflows:configure-collector-pipeline
+
+  Documentation: https://github.com/henrikrexed/bmad-observability-agent/tree/main/docs

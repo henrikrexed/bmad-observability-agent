@@ -29,26 +29,33 @@ The B-MAD Observability Agent is an AI-powered expert that helps you build produ
 
 ### Installation
 
-**Option 1: Copy to existing BMAD project**
+**Option 1: BMAD Installer (Recommended)**
+```bash
+# Install via BMAD CLI (requires BMAD Core installed)
+npx bmad install https://github.com/henrikrexed/bmad-observability-agent
+
+# Or if using npm package (coming soon)
+npx bmad install @henrikrexed/bmad-o11y
+```
+
+The installer will:
+- Copy agent and workflows to `_bmad/o11y/`
+- Register in agent and workflow manifests
+- Create IDE-specific command files (Claude Code, Cursor, Windsurf)
+- Set up output directories
+
+**Option 2: Manual Installation**
 ```bash
 # Clone this repository
 git clone https://github.com/henrikrexed/bmad-observability-agent.git
 
-# Copy .bmad directory to your project
-cp -r bmad-observability-agent/.bmad/ <your-project>/.bmad/
+# Copy to your BMAD project
+cp -r bmad-observability-agent/agents/ <your-project>/_bmad/o11y/agents/
+cp -r bmad-observability-agent/.bmad/workflows/ <your-project>/_bmad/o11y/workflows/
 
-# Or selectively copy agent and workflows
-cp bmad-observability-agent/.bmad/agents/o11y-engineer.agent.yaml <your-project>/.bmad/agents/
-cp bmad-observability-agent/.bmad/workflows/*.yaml <your-project>/.bmad/workflows/
-```
-
-**Option 2: Use as standalone BMAD project**
-```bash
-# Clone and use directly
-git clone https://github.com/henrikrexed/bmad-observability-agent.git
-cd bmad-observability-agent
-
-# The .bmad directory is ready to use
+# For Claude Code, also copy commands
+mkdir -p <your-project>/.claude/commands/bmad/o11y
+cp -r bmad-observability-agent/.claude/commands/bmad/o11y/* <your-project>/.claude/commands/bmad/o11y/
 ```
 
 **Option 3: Git submodule**
@@ -56,14 +63,25 @@ cd bmad-observability-agent
 # Add as submodule to your project
 git submodule add https://github.com/henrikrexed/bmad-observability-agent.git .bmad-o11y
 
-# Symlink to .bmad
-ln -s .bmad-o11y/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
-ln -s .bmad-o11y/.bmad/workflows/*.yaml .bmad/workflows/
+# Symlink the agent and workflows
+ln -s ../.bmad-o11y/agents/o11y-engineer.md _bmad/o11y/agents/
+ln -s ../.bmad-o11y/.bmad/workflows/*.yaml _bmad/o11y/workflows/
 ```
 
 ### First Use
+
+**Claude Code:**
 ```bash
-# In your AI assistant
+# Invoke the agent
+/bmad:o11y:agents:o11y-engineer
+
+# Or run a workflow directly
+/bmad:o11y:workflows:observability-quick-start
+```
+
+**Other AI Assistants:**
+```bash
+# Invoke the agent
 *o11y-engineer
 
 # Start with quick-start for new projects

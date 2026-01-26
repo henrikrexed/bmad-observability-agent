@@ -1,0 +1,19 @@
+# O11y Module Configuration
+# This file is populated during BMAD installation with user preferences
+
+# User preferences (set during installation)
+observability_backend: "{observability_backend}"
+collector_deployment: "{collector_deployment}"
+primary_language: "{primary_language}"
+
+# Output paths for generated artifacts
+o11y_artifacts: "{output_folder}/o11y-artifacts"
+collector_configs: "{output_folder}/collector-configs"
+dashboards: "{output_folder}/dashboards"
+semconv_schemas: "{output_folder}/semconv-schemas"
+
+# Inherited from BMAD Core
+user_name: "{user_name}"
+communication_language: "{communication_language}"
+document_output_language: "{document_output_language}"
+output_folder: "{output_folder}"
