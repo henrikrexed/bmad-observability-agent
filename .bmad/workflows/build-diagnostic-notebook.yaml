@@ -1,6 +1,11 @@
 name: Build Diagnostic Notebook
-version: 1.0.0
-description: Build a Dynatrace notebook for service diagnosis using logs, metrics, and spans (MCP-powered)
+version: 2.1.0
+description: Build a Dynatrace notebook for service diagnosis using dtctl YAML format
+
+knowledge_required:
+  - "{project-root}/.bmad/knowledge/dynatrace-formats.yaml"
+
+output_directory: "{project-root}/_bmad-output/dynatrace/notebooks"
 
 steps:
   - step: select-service
@@ -16,14 +21,12 @@ steps:
 
   - step: discover-data-schema
     prompt: |
-      Use Dynatrace MCP to discover the data schema for the selected service.
-
-      **If MCP is available:**
+      Use DQL to discover the data schema for the selected service.
 
       1. Discover log attributes:
       ```dql
       fetch logs
-      | filter dt.entity.service == "{{service_name}}"
+      | filter service.name == "{{service_name}}"
       | limit 1
       | fields *
       ```
@@ -31,34 +34,16 @@ steps:
       2. Discover span attributes:
       ```dql
       fetch spans
-      | filter dt.entity.service == "{{service_name}}"
+      | filter service.name == "{{service_name}}"
       | limit 1
       | fields *
       ```
 
       3. Discover available metrics:
       ```dql
-      fetch dt.metrics
-      | filter contains(metric.key, "service")
-      | summarize count(), by: {metric.key}
-      | sort count() desc
+      timeseries values=avg(http_request_duration_seconds), by:{route}
       | limit 20
       ```
-
-      4. Check for recent problems:
-      ```dql
-      fetch events
-      | filter event.type == "PROBLEM"
-      | filter affected_entity_ids contains "{{service_name}}"
-      | sort timestamp desc
-      | limit 10
-      ```
-
-      **If MCP is not available:**
-      Use standard attributes:
-      - Logs: severity, content, log.source, trace_id
-      - Spans: span.name, span.kind, duration, status_code
-      - Metrics: response.time, error.rate, throughput
 
       Document discovered schema for notebook generation.
 
@@ -66,90 +51,135 @@ steps:
 
   - step: generate-notebook
     prompt: |
-      Generate a comprehensive Dynatrace diagnostic notebook YAML.
+      Generate a comprehensive Dynatrace diagnostic notebook using **dtctl YAML format**.
 
-      Service: {{service_context}}
-      Schema: {{data_schema}}
+      **CRITICAL**: Load and follow the format from:
+      `{project-root}/.bmad/knowledge/dynatrace-formats.yaml` → `dynatrace_formats.notebook`
 
-      ## Notebook Structure
+      ## Service Context
+      {{service_context}}
 
-      ### Section 1: Service Overview
-      - Markdown: Service description and SLIs
-      - DQL: Current health status
-      - DQL: Key metrics summary
+      ## Schema
+      {{data_schema}}
 
-      ### Section 2: Error Analysis
-      - Markdown: How to investigate errors
-      - DQL: Error logs by severity
+      ## Required dtctl YAML Structure (version "7")
+      ```yaml
+      type: notebook
+      name: "{{service_name}} Diagnosis"
+      content:
+        version: "7"
+        defaultTimeframe:
+          from: now()-2h
+          to: now()
+        sections:
+          - id: "section-uuid-1"
+            type: markdown
+            markdown: |
+              # Service Diagnosis Notebook
+          - id: "section-uuid-2"
+            type: dql
+            state:
+              input:
+                value: |
+                  fetch spans
+                  | filter service.name == "{{service_name}}"
+                  | filter status.code == "ERROR"
+                  | limit 50
+                timeframe:
+                  from: now()-2h
+                  to: now()
+              visualization: table
+              visualizationSettings:
+                table:
+                  hideColumnsForLargeResults: true
+                autoSelectVisualization: true
+              querySettings:
+                maxResultRecords: 1000
+                defaultScanLimitGbytes: 500
+                maxResultMegaBytes: 1
+                defaultSamplingRatio: 10
+                enableSampling: false
+            davis:
+              includeLogs: true
+              davisVisualization:
+                isAvailable: true
+      ```
+
+      ## Notebook Sections to Include
+
+      ### Section 1: Service Overview (markdown)
+      - Service description and key SLIs
+      - How to use this notebook
+
+      ### Section 2: Error Analysis (dql)
       ```dql
       fetch logs
-      | filter dt.entity.service == "{{service_name}}"
-      | filter severity == "ERROR" or severity == "WARN"
+      | filter service.name == "{{service_name}}"
+      | filter loglevel == "ERROR" OR loglevel == "error"
       | sort timestamp desc
-      | limit 100
+      | limit 50
+      | fields timestamp, content, trace_id
       ```
-      - DQL: Error rate over time
-      - DQL: Top error messages
 
-      ### Section 3: Latency Analysis
-      - Markdown: Performance investigation guide
-      - DQL: Response time percentiles
+      ### Section 3: Error Traces (dql)
       ```dql
       fetch spans
-      | filter dt.entity.service == "{{service_name}}"
-      | summarize p50 = percentile(duration, 50),
-                  p95 = percentile(duration, 95),
-                  p99 = percentile(duration, 99)
+      | filter service.name == "{{service_name}}"
+      | filter status.code == "ERROR"
+      | sort start_time desc
+      | limit 20
+      | fields start_time, trace_id, span.name, duration/1000000 as duration_ms, error.message
       ```
-      - DQL: Slow transactions
-      - DQL: Latency by endpoint
 
-      ### Section 4: Dependency Analysis
-      - Markdown: Upstream/downstream impact
-      - DQL: Outbound calls
-      - DQL: Failed dependencies
-
-      ### Section 5: Resource Utilization
-      - Markdown: Infrastructure correlation
-      - DQL: CPU and memory metrics
-      - DQL: Thread/connection pool status
-
-      ### Section 6: Trace Deep Dive
-      - Markdown: How to analyze traces
-      - DQL: Sample traces with errors
-      - DQL: Distributed trace analysis
-
-      ### Section 7: Remediation Checklist
-      - Markdown: Common fixes and runbook steps
-
-      ## Output Format
-      Generate YAML file: `notebooks/{{service_name}}-diagnosis.yaml`
-
-      ```yaml
-      # notebooks/service-diagnosis.yaml
-      apiVersion: platform.dynatrace.com/v1
-      kind: Notebook
-      metadata:
-        name: {{service_name}}-diagnosis
-      spec:
-        sections:
-          - type: markdown
-            content: |
-              # {{service_name}} Diagnostic Notebook
-              ...
-          - type: dql
-            query: |
-              fetch logs
-              ...
+      ### Section 4: Latency Analysis (dql)
+      ```dql
+      fetch spans
+      | filter service.name == "{{service_name}}" AND span.kind == "SERVER"
+      | summarize {
+          p50=percentile(duration, 50)/1000000,
+          p95=percentile(duration, 95)/1000000,
+          p99=percentile(duration, 99)/1000000
+        }, by:{http.route}
+      | sort p95 desc
       ```
+
+      ### Section 5: Slow Requests (dql)
+      ```dql
+      fetch spans
+      | filter service.name == "{{service_name}}"
+      | filter duration > 2000000000
+      | sort duration desc
+      | limit 20
+      | fields start_time, trace_id, span.name, http.route, duration/1000000 as duration_ms
+      ```
+
+      ### Section 6: Trace-Log Correlation (markdown)
+      Instructions on using trace_id to correlate
+
+      ### Section 7: Logs for Trace (dql - parametric)
+      ```dql
+      // Replace TRACE_ID with actual trace ID
+      fetch logs
+      | filter trace_id == "TRACE_ID_HERE"
+      | sort timestamp asc
+      | fields timestamp, loglevel, content
+      ```
+
+      ## Key Requirements
+      - Use version: "7" (string, not integer)
+      - Sections is an ARRAY (not object like dashboard tiles)
+      - Each section needs unique id (UUID)
+      - DQL sections have nested state.input.value for query
+      - Generate unique UUIDs for each section id
+
+      ## Output
+      Save to: `{output_directory}/{{service_name}}-diagnosis.yaml`
 
       ## Deployment Commands
       ```bash
-      # Apply notebook
-      dtctl apply -f notebooks/{{service_name}}-diagnosis.yaml
+      # Deploy using dtctl
+      dtctl apply -f {{service_name}}-diagnosis.yaml
 
-      # List notebooks
-      dtctl get notebooks
+      # Dry run first
+      dtctl apply -f {{service_name}}-diagnosis.yaml --dry-run
       ```
-
-      Generate the complete notebook YAML file.

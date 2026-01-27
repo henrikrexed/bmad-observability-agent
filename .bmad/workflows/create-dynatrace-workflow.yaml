@@ -1,6 +1,11 @@
 name: Create Dynatrace Workflow
-version: 1.0.0
-description: Create Dynatrace workflow for automation
+version: 2.1.0
+description: Create Dynatrace workflow for automation using dtctl YAML format
+
+knowledge_required:
+  - "{project-root}/.bmad/knowledge/dynatrace-formats.yaml"
+
+output_directory: "{project-root}/_bmad-output/dynatrace/workflows"
 
 steps:
   - step: choose-workflow-type
@@ -34,6 +39,11 @@ steps:
          - Rotate credentials
          - Isolate services
 
+      6. **Kubernetes Troubleshooting**
+         - Monitor pod events
+         - Detect backoff/scheduling issues
+         - Correlate with traces and logs
+
     save_to: workflow_type
 
   - step: define-trigger
@@ -41,70 +51,176 @@ steps:
       How should this workflow be triggered?
 
       **Event-based:**
-      - Problem detected
-      - Anomaly detected
-      - Threshold exceeded
+      - Problem detected (event.type == "PROBLEM")
+      - Kubernetes event (event.provider == "KUBERNETES_EVENT")
+      - Custom event (event.type == "custom.my-event")
       - Deployment event
+      - Security alert
 
       **Schedule-based:**
-      - Daily at X time
+      - Daily at X time (cron expression)
       - Weekly on X day
       - Every X hours
 
       **Manual:**
-      - On-demand execution
+      - On-demand execution only
+
+      Provide the specific trigger configuration.
 
     save_to: trigger_config
 
   - step: design-workflow
     ask: |
-      Define workflow tasks (in order):
+      Define workflow tasks (in execution order):
 
-      Available task types:
-      - JavaScript code
-      - DQL query
-      - HTTP request
-      - Send Slack message
-      - Create Jira ticket
-      - Call PagerDuty
-      - Update ServiceNow
-      - Run kubectl command
+      Available task actions:
+      - `dynatrace.automations:execute-dql-query` - Run DQL query
+      - `dynatrace.automations:run-javascript` - Execute TypeScript/JS
+      - `dynatrace.automations:http-request` - Make HTTP call
+      - `dynatrace.slack:slack-send-message` - Send Slack message
+      - `dynatrace.jira:jira-create-issue` - Create Jira issue
+      - `dynatrace.ownership:get-ownership-from-entity` - Get entity owners
+      - `dynatrace.davis:davis-analyze` - Davis AI analysis
 
       For each task provide:
-      - Task name
-      - Type
-      - Configuration/code
-      - Error handling
+      - Task name (unique identifier)
+      - Action type
+      - Input parameters
+      - Conditions (when to execute)
+      - Dependencies (which tasks must complete first)
 
     save_to: workflow_tasks
 
   - step: generate-workflow
     prompt: |
-      Generate Dynatrace workflow YAML for dtctl:
+      Generate Dynatrace workflow YAML using **dtctl format**.
 
+      **CRITICAL**: Load and follow the format from:
+      `{project-root}/.bmad/knowledge/dynatrace-formats.yaml` → `dynatrace_formats.workflow`
+
+      ## Workflow Specification
       Type: {{workflow_type}}
       Trigger: {{trigger_config}}
       Tasks: {{workflow_tasks}}
 
-      Include:
-      - Complete workflow definition
-      - Error handling
-      - Retry logic
-      - Notifications
-      - dtctl deployment commands
-      - Testing procedure
+      ## Required dtctl YAML Structure
+      ```yaml
+      title: "Workflow Title"
+      description: "Workflow description"
+      trigger:
+        # Event-based trigger
+        event:
+          type: events
+          query: event.type == "PROBLEM"
+        # OR Schedule-based trigger
+        # schedule:
+        #   rule: "0 9 * * *"
+        #   timezone: "UTC"
+      tasks:
+        get_data:
+          action: dynatrace.automations:execute-dql-query
+          description: Query error spans
+          input:
+            query: |
+              fetch spans, from:-30m
+              | filter service.name == "my-service"
+              | filter status.code == "ERROR"
+              | summarize error_count=count(), by:{span.name}
+        process_data:
+          action: dynatrace.automations:run-javascript
+          description: Process query results
+          input:
+            script: |
+              import { execution } from '@dynatrace-sdk/automation-utils';
 
-      Deployment commands:
+              export default async function ({ execution_id }) {
+                const ex = await execution(execution_id);
+                const result = await ex.result('get_data');
+                const errors = result.records.filter(r => r.error_count > 10);
+                return { high_error_spans: errors };
+              }
+          conditions:
+            custom: "{{ result('get_data').records | length > 0 }}"
+            states:
+              get_data: OK
+          predecessors:
+            - get_data
+        notify_team:
+          action: dynatrace.slack:slack-send-message
+          description: Send Slack notification
+          input:
+            channel: alerts-channel
+            message: |
+              High error rate detected:
+              {{ result('process_data').high_error_spans | join('\n') }}
+            connection: slack-connection-id
+          conditions:
+            custom: "{{ result('process_data').high_error_spans | length > 0 }}"
+            states:
+              process_data: OK
+          predecessors:
+            - process_data
+      ```
+
+      ## Key Requirements
+      - Tasks is an OBJECT with task names as keys (not array)
+      - predecessors array defines execution order
+      - conditions.states defines required predecessor states
+      - Use Jinja2 templating: {{ result("task_name").field }}
+
+      ## JavaScript Task Example
+      ```javascript
+      import { execution } from '@dynatrace-sdk/automation-utils';
+      import { getEnvironmentUrl } from '@dynatrace-sdk/app-environment';
+
+      export default async function ({ execution_id }) {
+        const ex = await execution(execution_id);
+        const result = await ex.result('previous_task');
+
+        // Process data
+        const processed = result.records.map(r => ({
+          ...r,
+          url: getEnvironmentUrl() + '/ui/apps/...'
+        }));
+
+        return { processed_records: processed };
+      }
+      ```
+
+      ## Slack Notification with Loop Example
+      ```yaml
+      notify_each:
+        action: dynatrace.slack:slack-send-message
+        input:
+          channel: "{{ _.item.slackChannel }}"
+          message: |
+            *Alert*
+            Service: {{ _.item.service }}
+            Errors: {{ _.item.count }}
+          connection: slack-connection-id
+        withItems: "item in {{ result('process_data').alerts }}"
+        conditions:
+          custom: "{{ result('process_data').alerts | length > 0 }}"
+          states:
+            process_data: OK
+        predecessors:
+          - process_data
+      ```
+
+      ## Output
+      Save to: `{output_directory}/{{workflow_name}}.workflow.yaml`
+
+      ## Deployment Commands
       ```bash
-      # Apply workflow
-      dtctl apply -f workflow.yaml
+      # Deploy using dtctl
+      dtctl apply -f {{workflow_name}}.workflow.yaml
 
-      # Verify deployment
-      dtctl get workflows
+      # Dry run first
+      dtctl apply -f {{workflow_name}}.workflow.yaml --dry-run
 
-      # Execute workflow manually
-      dtctl execute workflow "workflow-name"
+      # Execute manually
+      dtctl execute workflow <workflow-id>
 
       # Check execution history
-      dtctl history workflow "workflow-name"
+      dtctl get workflow-executions --workflow <workflow-id>
       ```

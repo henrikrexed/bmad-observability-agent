@@ -1,0 +1,352 @@
+name: Observability Change Management
+version: 1.0.0
+description: Manage changes to semantic conventions, instrumentation, logging, and metrics through PRD, epics, and stories
+
+steps:
+  - step: identify-change-scope
+    ask: |
+      Let's document the observability changes you want to make.
+
+      **What type of change are you planning?**
+
+      1. **Semantic Conventions**
+         - Adding/modifying attribute definitions
+         - Creating custom namespaces
+         - Updating compliance requirements
+
+      2. **Instrumentation**
+         - Adding new instrumentation points
+         - Modifying existing spans/metrics
+         - Changing auto-instrumentation config
+
+      3. **Logging**
+         - Adding structured log attributes
+         - Changing log formats/levels
+         - Implementing trace correlation
+
+      4. **Metrics**
+         - Adding new metrics
+         - Modifying metric dimensions
+         - Changing cardinality/aggregations
+
+      Please describe:
+      - Which area(s) will be affected?
+      - What specific changes are needed?
+      - Why is this change required? (business/technical reason)
+      - What services/components will be impacted?
+
+    save_to: change_scope
+
+  - step: impact-analysis
+    prompt: |
+      Based on the proposed changes:
+
+      {{change_scope}}
+
+      Perform impact analysis and generate a summary:
+
+      ## Impact Assessment
+
+      ### Affected Components
+      - List all services, collectors, dashboards impacted
+      - Identify configuration files that need updates
+      - Note any downstream dependencies
+
+      ### Risk Analysis
+      - Breaking changes to existing telemetry
+      - Cardinality impact
+      - Migration requirements
+      - Backward compatibility concerns
+
+      ### Validation Requirements
+      - What needs to be tested
+      - Semantic convention compliance checks
+      - Performance validation
+
+      ### Estimated Effort
+      - Development effort per component
+      - Testing and validation time
+      - Documentation updates needed
+
+      Present this analysis to help inform the PRD creation.
+
+    save_to: impact_analysis
+
+  - step: request-prd-update
+    ask: |
+      ## PRD Update Required
+
+      Based on the impact analysis:
+
+      {{impact_analysis}}
+
+      **Action Required:** Please create or update the PRD file for this observability change.
+
+      ### PRD Location
+      Create/update the PRD at: `_bmad-output/prd/observability-changes-prd.md`
+
+      ### Suggested PRD Structure
+
+      ```markdown
+      # Observability Change PRD
+
+      ## Overview
+      [Brief description of the change]
+
+      ## Problem Statement
+      [Why this change is needed]
+
+      ## Proposed Solution
+      [What changes will be made]
+
+      ## Scope
+      - Semantic Conventions: [yes/no - describe]
+      - Instrumentation: [yes/no - describe]
+      - Logging: [yes/no - describe]
+      - Metrics: [yes/no - describe]
+
+      ## Success Criteria
+      - [ ] Criterion 1
+      - [ ] Criterion 2
+
+      ## Non-Goals
+      [What is explicitly out of scope]
+
+      ## Dependencies
+      [External dependencies]
+
+      ## Risks and Mitigations
+      | Risk | Impact | Mitigation |
+      |------|--------|------------|
+
+      ## Timeline
+      [Estimated timeline]
+      ```
+
+      **Please confirm when you have updated the PRD file**, or let me know if you'd like me to provide more detailed guidance for any section.
+
+    save_to: prd_confirmation
+
+  - step: request-epic-creation
+    ask: |
+      ## Epic Creation Required
+
+      Now let's create the epic to track this observability change implementation.
+
+      **Action Required:** Please create the epic file.
+
+      ### Epic Location
+      Create the epic at: `_bmad-output/epics/obs-change-epic-{date}.yaml`
+
+      ### Suggested Epic Structure
+
+      Based on the change scope:
+      {{change_scope}}
+
+      ```yaml
+      # BMAD Observability Change Epic
+      epic:
+        id: "OBS-CHG-{number}"
+        title: "[Title describing the change]"
+        description: |
+          [Detailed description from PRD]
+        owner: "o11y-engineer"
+        status: "draft"
+        priority: "[critical/high/medium/low]"
+        prd_reference: "_bmad-output/prd/observability-changes-prd.md"
+
+        # Change Categories
+        change_categories:
+          semantic_conventions: [true/false]
+          instrumentation: [true/false]
+          logging: [true/false]
+          metrics: [true/false]
+
+        acceptance_criteria:
+          - "All affected services updated"
+          - "Semantic convention compliance validated"
+          - "No cardinality regression"
+          - "Documentation updated"
+          - "Dashboards reflect new telemetry"
+
+        dependencies:
+          - "[Any blocking dependencies]"
+
+        stories: []  # Will be populated in next step
+      ```
+
+      **Please confirm when you have created the epic file**, or ask if you need help with any section.
+
+    save_to: epic_confirmation
+
+  - step: request-story-creation
+    ask: |
+      ## Story Creation Required
+
+      Now let's break down the epic into implementable stories.
+
+      **Action Required:** Please add stories to the epic file.
+
+      Based on the change scope and impact analysis, here are the recommended stories to add:
+
+      ### Recommended Stories Structure
+
+      Add these to the `stories:` section of your epic file:
+
+      ```yaml
+      stories:
+        # Story 1: Schema/Convention Updates (if semantic conventions affected)
+        - id: "OBS-CHG-{epic}-01"
+          title: "Update Semantic Convention Definitions"
+          description: |
+            Update Weaver schema definitions for the new/modified attributes.
+            - Create/modify attribute definitions
+            - Update namespace if needed
+            - Generate documentation
+          status: "todo"
+          priority: "high"
+          estimated_effort: "2-4 hours"
+          tasks:
+            - description: "Review current schema definitions"
+              status: "todo"
+            - description: "Create/update attribute definitions"
+              status: "todo"
+            - description: "Validate with Weaver"
+              status: "todo"
+            - description: "Generate updated documentation"
+              status: "todo"
+          acceptance_criteria:
+            - "Schema validates without errors"
+            - "All new attributes documented"
+            - "Type definitions are correct"
+
+        # Story 2: Instrumentation Updates (if instrumentation affected)
+        - id: "OBS-CHG-{epic}-02"
+          title: "Update Application Instrumentation"
+          description: |
+            Implement instrumentation changes in affected services.
+          status: "todo"
+          priority: "high"
+          estimated_effort: "4-8 hours"
+          dependencies: ["OBS-CHG-{epic}-01"]
+          tasks:
+            - description: "Update instrumentation code"
+              status: "todo"
+            - description: "Add new spans/metrics/logs as needed"
+              status: "todo"
+            - description: "Test locally"
+              status: "todo"
+          acceptance_criteria:
+            - "New telemetry data appears in backend"
+            - "Follows semantic conventions"
+
+        # Story 3: Collector Configuration (if pipeline changes needed)
+        - id: "OBS-CHG-{epic}-03"
+          title: "Update Collector Configuration"
+          description: |
+            Update OTel Collector pipeline if processing changes are needed.
+          status: "todo"
+          priority: "medium"
+          estimated_effort: "1-2 hours"
+          tasks:
+            - description: "Update processor configuration"
+              status: "todo"
+            - description: "Test with dry-run"
+              status: "todo"
+            - description: "Deploy to staging"
+              status: "todo"
+          acceptance_criteria:
+            - "Configuration validates"
+            - "No data loss during transition"
+
+        # Story 4: Dashboard Updates
+        - id: "OBS-CHG-{epic}-04"
+          title: "Update Dashboards and Visualizations"
+          description: |
+            Update Dynatrace dashboards to reflect new telemetry.
+          status: "todo"
+          priority: "medium"
+          estimated_effort: "2-4 hours"
+          dependencies: ["OBS-CHG-{epic}-02"]
+          tasks:
+            - description: "Update DQL queries"
+              status: "todo"
+            - description: "Add new tiles if needed"
+              status: "todo"
+            - description: "Test visualizations"
+              status: "todo"
+          acceptance_criteria:
+            - "Dashboards show new data correctly"
+            - "No broken queries"
+
+        # Story 5: Validation and Documentation
+        - id: "OBS-CHG-{epic}-05"
+          title: "Validate Changes and Update Documentation"
+          description: |
+            Final validation and documentation updates.
+          status: "todo"
+          priority: "high"
+          estimated_effort: "2-3 hours"
+          dependencies: ["OBS-CHG-{epic}-02", "OBS-CHG-{epic}-03", "OBS-CHG-{epic}-04"]
+          tasks:
+            - description: "Run semantic convention validation"
+              status: "todo"
+            - description: "Verify cardinality impact"
+              status: "todo"
+            - description: "Update runbooks"
+              status: "todo"
+            - description: "Update README/docs"
+              status: "todo"
+          acceptance_criteria:
+            - "95%+ semantic convention compliance"
+            - "No cardinality regression"
+            - "Documentation complete"
+      ```
+
+      **Please add the relevant stories to your epic file** based on which change categories apply to your change.
+
+      Let me know when you've added the stories, or if you need help customizing them for your specific change.
+
+    save_to: story_confirmation
+
+  - step: generate-checklist
+    prompt: |
+      Generate a summary checklist based on the confirmed PRD, epic, and stories.
+
+      User confirmations:
+      - PRD: {{prd_confirmation}}
+      - Epic: {{epic_confirmation}}
+      - Stories: {{story_confirmation}}
+
+      ## Observability Change Management Checklist
+
+      Create a checklist summary showing:
+
+      ### Documentation Status
+      - [ ] PRD created/updated at: `_bmad-output/prd/observability-changes-prd.md`
+      - [ ] Epic created at: `_bmad-output/epics/obs-change-epic-{date}.yaml`
+      - [ ] Stories added to epic file
+
+      ### Implementation Readiness
+      - [ ] Impact analysis complete
+      - [ ] Dependencies identified
+      - [ ] Stories have clear acceptance criteria
+      - [ ] Effort estimates provided
+
+      ### Next Steps
+      1. Review and finalize PRD with stakeholders
+      2. Prioritize stories in the epic
+      3. Begin implementation with Story 1
+      4. Update story status as work progresses
+      5. Generate handoff document when complete
+
+      ### Useful Commands
+      - `validate-semconv` - Validate semantic convention compliance
+      - `create-custom-semconv` - Create new semantic conventions
+      - `adjust-instrumentation` - Update instrumentation
+      - `create-dt-dashboard` - Update dashboards
+      - `generate-handoff` - Create handoff for other agents
+
+      The observability change is now properly documented and ready for implementation!
+
+    save_to: change_management_summary

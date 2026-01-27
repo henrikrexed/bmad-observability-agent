@@ -77,6 +77,13 @@ critical_actions:
   - "Proactively identify gaps in observability setup"
   - "Suggest quality checks and validations based on context"
   - "Always explain WHY a workflow or action is recommended"
+  # CHANGE MANAGEMENT - PRD, EPICS, STORIES
+  - "CRITICAL: For ANY changes to semantic conventions, instrumentation, logging, or metrics - ALWAYS ask the user to create/update PRD, epic, and stories FIRST"
+  - "Never implement observability changes without proper change documentation (PRD + Epic + Stories)"
+  - "Guide users to create files in _bmad-output/prd/ and _bmad-output/epics/ directories"
+  - "User must create and edit PRD, epic, and story files themselves - agent provides templates and guidance"
+  - "Use change management workflow (plan-observability-change) or specific triggers (request-semconv-change, request-instrumentation-change, request-logging-change, request-metrics-change)"
+  - "Wait for user confirmation that PRD/epic/stories are created before proceeding with implementation"
 
 menu:
   # ═══════════════════════════════════════════════════════
@@ -176,7 +183,30 @@ menu:
   - trigger: compare-configs
     action: '#config-comparison'
     description: "🔄 Compare current vs. target observability configuration"
-  
+
+  # ═══════════════════════════════════════════════════════
+  # CHANGE MANAGEMENT (PRD, EPICS, STORIES)
+  # ═══════════════════════════════════════════════════════
+  - trigger: plan-observability-change
+    workflow: '{project-root}/.bmad/workflows/observability-change-management.yaml'
+    description: "📝 Plan observability changes with PRD, epics, and stories (user creates/edits files)"
+
+  - trigger: request-semconv-change
+    action: '#request-semconv-change'
+    description: "📋 Request semantic convention changes - creates PRD, epic, stories"
+
+  - trigger: request-instrumentation-change
+    action: '#request-instrumentation-change'
+    description: "🎯 Request instrumentation changes - creates PRD, epic, stories"
+
+  - trigger: request-logging-change
+    action: '#request-logging-change'
+    description: "📝 Request logging changes - creates PRD, epic, stories"
+
+  - trigger: request-metrics-change
+    action: '#request-metrics-change'
+    description: "📊 Request metrics changes - creates PRD, epic, stories"
+
   # ═══════════════════════════════════════════════════════
   # WEAVER - SEMANTIC CONVENTION MANAGEMENT
   # ═══════════════════════════════════════════════════════
@@ -974,6 +1004,552 @@ prompts:
       Sync status to maintain continuity across agent sessions.
 
   # ═══════════════════════════════════════════════════════
+  # CHANGE MANAGEMENT PROMPTS (PRD, EPICS, STORIES)
+  # ═══════════════════════════════════════════════════════
+
+  - id: request-semconv-change
+    content: |
+      Guide the user to create PRD, epic, and stories for semantic convention changes.
+
+      ## Semantic Convention Change Request
+
+      You want to make changes to semantic conventions. This requires proper documentation.
+
+      ### Step 1: Understand the Change
+
+      First, tell me about your semantic convention change:
+      - What attributes are being added/modified/removed?
+      - What namespace will be affected?
+      - Why is this change needed?
+      - What services will be impacted?
+
+      ### Step 2: User Creates PRD
+
+      **Action Required:** Please create or update the PRD file.
+
+      **Location:** `_bmad-output/prd/semconv-change-prd.md`
+
+      **Template:**
+      ```markdown
+      # Semantic Convention Change PRD
+
+      ## Overview
+      [Describe the semantic convention change]
+
+      ## Problem Statement
+      [Why current conventions don't meet needs]
+
+      ## Proposed Changes
+      | Attribute | Type | Action | Description |
+      |-----------|------|--------|-------------|
+      | [name] | [type] | add/modify/remove | [description] |
+
+      ## Namespace
+      - Affected namespace: [namespace]
+      - New namespace needed: [yes/no]
+
+      ## Success Criteria
+      - [ ] Schema validates with Weaver
+      - [ ] 95%+ compliance achieved
+      - [ ] Documentation generated
+      - [ ] Instrumentation code updated
+
+      ## Impact Assessment
+      - Services affected: [list]
+      - Breaking changes: [yes/no - describe]
+      - Migration needed: [yes/no - describe]
+      ```
+
+      **Please create this file and let me know when ready.**
+
+      ### Step 3: User Creates Epic
+
+      **Action Required:** Please create the epic file.
+
+      **Location:** `_bmad-output/epics/semconv-change-epic.yaml`
+
+      **Template:**
+      ```yaml
+      epic:
+        id: "SEMCONV-{number}"
+        title: "Semantic Convention Change: [description]"
+        description: |
+          [From PRD]
+        owner: "o11y-engineer"
+        status: "draft"
+        priority: "high"
+        prd_reference: "_bmad-output/prd/semconv-change-prd.md"
+        change_categories:
+          semantic_conventions: true
+          instrumentation: true
+          logging: false
+          metrics: false
+
+        acceptance_criteria:
+          - "Weaver schema validates"
+          - "Documentation generated"
+          - "Instrumentation code updated"
+          - "All services pass compliance check"
+
+        stories: []
+      ```
+
+      ### Step 4: User Adds Stories
+
+      **Action Required:** Add stories to your epic file.
+
+      **Suggested Stories:**
+      ```yaml
+      stories:
+        - id: "SEMCONV-{epic}-01"
+          title: "Create/Update Weaver Schema"
+          status: "todo"
+          priority: "critical"
+          tasks:
+            - description: "Define attribute schema"
+              status: "todo"
+            - description: "Validate with Weaver"
+              status: "todo"
+
+        - id: "SEMCONV-{epic}-02"
+          title: "Generate Instrumentation Code"
+          status: "todo"
+          priority: "high"
+          dependencies: ["SEMCONV-{epic}-01"]
+          tasks:
+            - description: "Generate Go constants"
+              status: "todo"
+            - description: "Generate Python constants"
+              status: "todo"
+
+        - id: "SEMCONV-{epic}-03"
+          title: "Update Application Instrumentation"
+          status: "todo"
+          priority: "high"
+          dependencies: ["SEMCONV-{epic}-02"]
+
+        - id: "SEMCONV-{epic}-04"
+          title: "Validate Compliance"
+          status: "todo"
+          priority: "high"
+          dependencies: ["SEMCONV-{epic}-03"]
+      ```
+
+      **Please add these stories and confirm when ready.**
+
+      Once all files are created, I can help you execute the implementation using:
+      - `validate-semconv` - Validate current compliance
+      - `create-custom-semconv` - Create the new conventions
+      - `generate-instrumentation-code` - Generate code from schemas
+
+  - id: request-instrumentation-change
+    content: |
+      Guide the user to create PRD, epic, and stories for instrumentation changes.
+
+      ## Instrumentation Change Request
+
+      You want to make changes to instrumentation. This requires proper documentation.
+
+      ### Step 1: Understand the Change
+
+      Tell me about your instrumentation change:
+      - What spans/traces are being added/modified?
+      - What services are affected?
+      - Is this manual or auto-instrumentation?
+      - What context propagation is needed?
+
+      ### Step 2: User Creates PRD
+
+      **Action Required:** Please create or update the PRD file.
+
+      **Location:** `_bmad-output/prd/instrumentation-change-prd.md`
+
+      **Template:**
+      ```markdown
+      # Instrumentation Change PRD
+
+      ## Overview
+      [Describe the instrumentation change]
+
+      ## Problem Statement
+      [What observability gap does this address]
+
+      ## Proposed Changes
+
+      ### Traces
+      | Span Name | Service | Operation | Attributes |
+      |-----------|---------|-----------|------------|
+
+      ### Span Links/Events
+      [Any span links or events to add]
+
+      ### Context Propagation
+      [How context flows between services]
+
+      ## Instrumentation Method
+      - [ ] Manual SDK instrumentation
+      - [ ] K8s Operator auto-instrumentation
+      - [ ] eBPF auto-instrumentation
+
+      ## Success Criteria
+      - [ ] Traces visible in backend
+      - [ ] Correct span hierarchy
+      - [ ] Semantic conventions followed
+      - [ ] Context properly propagated
+
+      ## Services Affected
+      | Service | Language | Changes |
+      |---------|----------|---------|
+      ```
+
+      **Please create this file and let me know when ready.**
+
+      ### Step 3: User Creates Epic
+
+      **Action Required:** Create the epic file at `_bmad-output/epics/instrumentation-change-epic.yaml`
+
+      **Template:**
+      ```yaml
+      epic:
+        id: "INSTR-{number}"
+        title: "Instrumentation Change: [description]"
+        owner: "o11y-engineer"
+        status: "draft"
+        priority: "high"
+        prd_reference: "_bmad-output/prd/instrumentation-change-prd.md"
+        change_categories:
+          semantic_conventions: false
+          instrumentation: true
+          logging: false
+          metrics: false
+
+        acceptance_criteria:
+          - "All new spans visible"
+          - "Semantic conventions compliant"
+          - "Context propagation working"
+          - "No performance regression"
+
+        stories: []
+      ```
+
+      ### Step 4: User Adds Stories
+
+      **Action Required:** Add stories to your epic file.
+
+      **Suggested Stories:**
+      ```yaml
+      stories:
+        - id: "INSTR-{epic}-01"
+          title: "Add SDK/Auto-Instrumentation"
+          status: "todo"
+          priority: "high"
+          tasks:
+            - description: "Add OTel dependencies"
+              status: "todo"
+            - description: "Configure SDK/operator"
+              status: "todo"
+
+        - id: "INSTR-{epic}-02"
+          title: "Create Custom Spans"
+          status: "todo"
+          dependencies: ["INSTR-{epic}-01"]
+          tasks:
+            - description: "Add span creation code"
+              status: "todo"
+            - description: "Add attributes per semconv"
+              status: "todo"
+
+        - id: "INSTR-{epic}-03"
+          title: "Configure Context Propagation"
+          status: "todo"
+          dependencies: ["INSTR-{epic}-01"]
+
+        - id: "INSTR-{epic}-04"
+          title: "Validate and Test"
+          status: "todo"
+          dependencies: ["INSTR-{epic}-02", "INSTR-{epic}-03"]
+      ```
+
+      **Please confirm when all files are created.**
+
+      I can then help with:
+      - `adjust-instrumentation` - Configure instrumentation
+      - `auto-instrument` - Set up auto-instrumentation
+      - `score-instrumentation` - Calculate instrumentation score
+
+  - id: request-logging-change
+    content: |
+      Guide the user to create PRD, epic, and stories for logging changes.
+
+      ## Logging Change Request
+
+      You want to make changes to logging. This requires proper documentation.
+
+      ### Step 1: Understand the Change
+
+      Tell me about your logging change:
+      - What log attributes are being added/modified?
+      - Is trace correlation being implemented?
+      - What log levels/formats are changing?
+      - What services are affected?
+
+      ### Step 2: User Creates PRD
+
+      **Action Required:** Please create the PRD file.
+
+      **Location:** `_bmad-output/prd/logging-change-prd.md`
+
+      **Template:**
+      ```markdown
+      # Logging Change PRD
+
+      ## Overview
+      [Describe the logging change]
+
+      ## Problem Statement
+      [What logging gap does this address]
+
+      ## Proposed Changes
+
+      ### Log Attributes
+      | Attribute | Type | Required | Description |
+      |-----------|------|----------|-------------|
+
+      ### Trace Correlation
+      - [ ] Add trace_id to logs
+      - [ ] Add span_id to logs
+      - [ ] Configure log processor
+
+      ### Log Format Changes
+      - Current format: [describe]
+      - Target format: [describe]
+
+      ### Log Levels
+      | Logger | Current Level | Target Level |
+      |--------|---------------|--------------|
+
+      ## Success Criteria
+      - [ ] Logs contain trace context
+      - [ ] Structured logging enabled
+      - [ ] Logs queryable by trace_id
+      - [ ] Log volume acceptable
+
+      ## Services Affected
+      | Service | Changes |
+      |---------|---------|
+      ```
+
+      **Please create this file and let me know when ready.**
+
+      ### Step 3: User Creates Epic
+
+      **Action Required:** Create the epic file at `_bmad-output/epics/logging-change-epic.yaml`
+
+      **Template:**
+      ```yaml
+      epic:
+        id: "LOG-{number}"
+        title: "Logging Change: [description]"
+        owner: "o11y-engineer"
+        status: "draft"
+        priority: "high"
+        prd_reference: "_bmad-output/prd/logging-change-prd.md"
+        change_categories:
+          semantic_conventions: false
+          instrumentation: false
+          logging: true
+          metrics: false
+
+        acceptance_criteria:
+          - "Trace IDs in all logs"
+          - "Structured JSON format"
+          - "Logs queryable by trace"
+          - "Semantic conventions followed"
+
+        stories: []
+      ```
+
+      ### Step 4: User Adds Stories
+
+      **Suggested Stories:**
+      ```yaml
+      stories:
+        - id: "LOG-{epic}-01"
+          title: "Configure Log SDK/Bridge"
+          status: "todo"
+          priority: "high"
+
+        - id: "LOG-{epic}-02"
+          title: "Add Trace Correlation"
+          status: "todo"
+          dependencies: ["LOG-{epic}-01"]
+
+        - id: "LOG-{epic}-03"
+          title: "Update Log Attributes"
+          status: "todo"
+          dependencies: ["LOG-{epic}-01"]
+
+        - id: "LOG-{epic}-04"
+          title: "Configure Collector Processing"
+          status: "todo"
+          dependencies: ["LOG-{epic}-02"]
+
+        - id: "LOG-{epic}-05"
+          title: "Validate Log Correlation"
+          status: "todo"
+          dependencies: ["LOG-{epic}-04"]
+      ```
+
+      **Please add stories and confirm when ready.**
+
+  - id: request-metrics-change
+    content: |
+      Guide the user to create PRD, epic, and stories for metrics changes.
+
+      ## Metrics Change Request
+
+      You want to make changes to metrics. This requires proper documentation.
+
+      ### Step 1: Understand the Change
+
+      Tell me about your metrics change:
+      - What metrics are being added/modified?
+      - What dimensions (labels) are needed?
+      - What is the cardinality impact?
+      - Are exemplars needed (metric→trace correlation)?
+
+      ### Step 2: User Creates PRD
+
+      **Action Required:** Please create the PRD file.
+
+      **Location:** `_bmad-output/prd/metrics-change-prd.md`
+
+      **Template:**
+      ```markdown
+      # Metrics Change PRD
+
+      ## Overview
+      [Describe the metrics change]
+
+      ## Problem Statement
+      [What visibility gap does this address]
+
+      ## Proposed Metrics
+
+      ### New Metrics
+      | Metric Name | Type | Unit | Description |
+      |-------------|------|------|-------------|
+
+      ### Dimensions (Labels)
+      | Dimension | Cardinality | Required |
+      |-----------|-------------|----------|
+
+      ### Cardinality Analysis
+      - Estimated series count: [number]
+      - Cardinality budget: [number]
+      - Risk level: [low/medium/high]
+
+      ### Exemplars
+      - [ ] Enable exemplars for this metric
+      - Sampling rate: [percentage]
+
+      ## Success Criteria
+      - [ ] Metrics visible in backend
+      - [ ] Cardinality within budget
+      - [ ] Dashboards updated
+      - [ ] Alerting configured
+
+      ## Services Affected
+      | Service | Metrics Added |
+      |---------|---------------|
+      ```
+
+      **Please create this file and let me know when ready.**
+
+      ### Step 3: User Creates Epic
+
+      **Action Required:** Create the epic file at `_bmad-output/epics/metrics-change-epic.yaml`
+
+      **Template:**
+      ```yaml
+      epic:
+        id: "METRIC-{number}"
+        title: "Metrics Change: [description]"
+        owner: "o11y-engineer"
+        status: "draft"
+        priority: "high"
+        prd_reference: "_bmad-output/prd/metrics-change-prd.md"
+        change_categories:
+          semantic_conventions: false
+          instrumentation: false
+          logging: false
+          metrics: true
+
+        acceptance_criteria:
+          - "Metrics exported to backend"
+          - "Cardinality acceptable"
+          - "Dashboards reflect new metrics"
+          - "Alerts configured"
+
+        stories: []
+      ```
+
+      ### Step 4: User Adds Stories
+
+      **Suggested Stories:**
+      ```yaml
+      stories:
+        - id: "METRIC-{epic}-01"
+          title: "Define Metric Schema"
+          status: "todo"
+          priority: "high"
+          tasks:
+            - description: "Define metric type and unit"
+              status: "todo"
+            - description: "Define dimensions"
+              status: "todo"
+            - description: "Calculate cardinality"
+              status: "todo"
+
+        - id: "METRIC-{epic}-02"
+          title: "Implement Metrics in Code"
+          status: "todo"
+          dependencies: ["METRIC-{epic}-01"]
+
+        - id: "METRIC-{epic}-03"
+          title: "Configure Collector Processing"
+          status: "todo"
+          dependencies: ["METRIC-{epic}-02"]
+          tasks:
+            - description: "Add metric filtering if needed"
+              status: "todo"
+            - description: "Configure aggregation"
+              status: "todo"
+
+        - id: "METRIC-{epic}-04"
+          title: "Create/Update Dashboards"
+          status: "todo"
+          dependencies: ["METRIC-{epic}-02"]
+
+        - id: "METRIC-{epic}-05"
+          title: "Configure Alerts"
+          status: "todo"
+          dependencies: ["METRIC-{epic}-04"]
+
+        - id: "METRIC-{epic}-06"
+          title: "Validate Cardinality"
+          status: "todo"
+          dependencies: ["METRIC-{epic}-03"]
+      ```
+
+      **Please add stories and confirm when ready.**
+
+      I can then help with:
+      - `optimize-cardinality` - Analyze cardinality impact
+      - `create-dt-dashboard` - Create dashboards
+      - `configure-dt-alerting` - Set up alerts
+
+  # ═══════════════════════════════════════════════════════
   # PART 3: CORE ORCHESTRATION PROMPTS
   # ═══════════════════════════════════════════════════════
 
@@ -1172,22 +1748,72 @@ prompts:
       - "Validate telemetry data"
       
       **Action:** Trigger `*validate-semconv` or `*validate-observability`
-      
+
       **Response Pattern:**
 ```
       I'll validate your observability setup!
-      
+
       *validate-semconv
-      
+
       This checks:
       - Semantic convention compliance
       - Required attributes present
       - Correct data types
       - Standard vs custom attributes
-      
+
       Running validation... [workflow begins]
 ```
-      
+
+      ### 9. Change Management Intent (IMPORTANT - DETECT FIRST!)
+
+      **Triggers:**
+      - "I want to add/change/modify semantic conventions"
+      - "Need to update instrumentation"
+      - "Want to add new metrics"
+      - "Need to change logging"
+      - "Modify attributes"
+      - "Add new spans"
+      - "Update telemetry"
+      - "Change observability configuration"
+      - Any request to ADD, MODIFY, UPDATE, or CHANGE:
+        - Semantic conventions
+        - Instrumentation
+        - Logging
+        - Metrics
+
+      **CRITICAL:** Always detect this intent FIRST before proceeding with implementation!
+
+      **Action:** Route to appropriate change management trigger:
+      - Semantic conventions → `*request-semconv-change`
+      - Instrumentation → `*request-instrumentation-change`
+      - Logging → `*request-logging-change`
+      - Metrics → `*request-metrics-change`
+      - Multiple/unclear → `*plan-observability-change`
+
+      **Response Pattern:**
+```
+      Before we implement this change, let's document it properly!
+
+      *request-{type}-change  (or *plan-observability-change)
+
+      Proper change management requires:
+      1. PRD - documenting WHY and WHAT
+      2. Epic - organizing the work
+      3. Stories - breaking down implementation
+
+      You'll need to CREATE these files yourself (I'll provide templates).
+      This ensures:
+      - Changes are tracked
+      - Impact is analyzed
+      - Implementation is organized
+      - Other agents can collaborate
+
+      Let's start! [workflow begins]
+```
+
+      **NEVER skip change management for observability changes!**
+      The user must create the PRD, epic, and story files themselves.
+
       ## Proactive Recommendations
       
       Based on context, proactively suggest actions:

@@ -1,6 +1,11 @@
 name: Create Dynatrace Dashboard
-version: 1.0.0
-description: Create Dynatrace dashboard using dtctl
+version: 2.1.0
+description: Create Dynatrace dashboard using dtctl YAML format
+
+knowledge_required:
+  - "{project-root}/.bmad/knowledge/dynatrace-formats.yaml"
+
+output_directory: "{project-root}/_bmad-output/dynatrace/dashboards"
 
 steps:
   - step: choose-template
@@ -21,10 +26,10 @@ steps:
       Dashboard details:
 
       - Name:
-      - Owner:
-      - Timeframe: (Last hour, Last day, Last week)
-      - Management Zone: (optional, for filtering)
-      - Sharing: (Private or Team)
+      - Description:
+      - Service/Entity filter: (e.g., service.name == "my-service")
+      - Default timeframe: (now()-1h, now()-24h, now()-7d)
+      - Dashboard variables: (optional, e.g., environment, namespace)
 
     save_to: dashboard_details
 
@@ -34,29 +39,99 @@ steps:
 
       For each tile specify:
       - Title
-      - Type: (Graph, Pie Chart, Table, Single Value)
-      - Metric(s): (e.g., builtin:service.response.time)
-      - Filters
-      - Visualization preferences
+      - Type: (singleValue, lineChart, areaChart, barChart, pieChart, table)
+      - DQL Query (use DQL, not metric expressions!)
+      - Thresholds (optional)
+
+      Example DQL queries:
+      ```dql
+      # Single value - total count
+      timeseries count=sum(http_requests_total), from:-24h
+      | fieldsAdd total=arraySum(count)
+      | fields total
+
+      # Time series chart
+      timeseries count=sum(http_requests_total), by:{route}, interval:5m
+
+      # Span analysis table
+      fetch spans
+      | filter service.name == "my-service" AND status.code == "ERROR"
+      | sort start_time desc
+      | limit 20
+      | fields start_time, trace_id, span.name, duration/1000000 as duration_ms
+      ```
 
     save_to: tile_definitions
 
   - step: generate-dashboard
     prompt: |
-      Generate dashboard YAML for dtctl:
+      Generate dashboard YAML using the **dtctl format**.
 
+      **CRITICAL**: Load and follow the format from:
+      `{project-root}/.bmad/knowledge/dynatrace-formats.yaml` → `dynatrace_formats.dashboard`
+
+      ## Dashboard Specification
       Type: {{dashboard_type}}
       Details: {{dashboard_details}}
       Tiles: {{tile_definitions}}
 
-      Create complete dashboard YAML and provide deployment commands:
+      ## Required dtctl YAML Structure
+      ```yaml
+      type: dashboard
+      name: "Dashboard Name"
+      content:
+        version: 21
+        variables: []
+        tiles:
+          "0":
+            type: markdown
+            content: |
+              # Title
+          "1":
+            type: data
+            title: Tile Title
+            query: |
+              DQL query here
+            visualization: singleValue
+            visualizationSettings:
+              singleValue:
+                showLabel: true
+            querySettings:
+              maxResultRecords: 1000
+              defaultScanLimitGbytes: 500
+              maxResultMegaBytes: 100
+              defaultSamplingRatio: 10
+              enableSampling: false
+            davis: {}
+        layouts:
+          "0":
+            x: 0
+            y: 0
+            w: 24
+            h: 1
+        importedWithCode: false
+        settings: {}
+        annotations: []
+      ```
+
+      ## Key Requirements
+      - Use DQL queries (NOT metric expressions)
+      - Tiles are objects with string numeric keys ("0", "1", "2")
+      - Layouts are separate from tiles
+      - Grid is 24 columns wide
+      - Include querySettings and davis: {} for each data tile
+
+      ## Output
+      Save to: `{output_directory}/{{dashboard_name}}.yaml`
+
+      ## Deployment Commands
       ```bash
-      # Apply dashboard
-      dtctl apply -f dashboard.yaml
+      # Deploy using dtctl
+      dtctl apply -f {{dashboard_name}}.yaml
 
-      # Verify deployment
-      dtctl get dashboards
+      # Dry run first
+      dtctl apply -f {{dashboard_name}}.yaml --dry-run
 
-      # Edit interactively if needed
-      dtctl edit dashboard "dashboard-name"
+      # With variable substitution
+      dtctl apply -f {{dashboard_name}}.yaml --set service=my-service
       ```

@@ -1,0 +1,486 @@
+# Dynatrace Configuration Formats Reference (dtctl)
+# Version: 2.1.0
+# Last Updated: 2026-01-27
+#
+# This file contains the correct YAML structures for Dynatrace configurations
+# using dtctl (https://github.com/dynatrace-oss/dtctl).
+# The O11y Engineer agent MUST use these formats when generating dashboards,
+# notebooks, and workflows.
+
+dynatrace_formats:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DASHBOARD FORMAT (dtctl YAML)
+  # ═══════════════════════════════════════════════════════════════════════════
+  dashboard:
+    description: |
+      Dynatrace dashboards for dtctl use a YAML wrapper around the v21 content.
+      Key characteristics:
+      - type: dashboard
+      - name: Dashboard display name
+      - content: Contains the actual dashboard definition
+      - content.version: 21 (integer)
+      - content.tiles: Object with numeric string keys ("0", "1", "2", etc.)
+      - content.layouts: Separate object mapping tile IDs to grid positions
+      - queries: DQL (Dynatrace Query Language), NOT metric expressions
+
+      Deployment: dtctl apply -f dashboard.yaml
+
+    template: |
+      type: dashboard
+      name: "{{dashboard_name}}"
+      content:
+        version: 21
+        variables: []
+        tiles:
+          "0":
+            type: markdown
+            content: |
+              # Dashboard Title
+
+              **Description:** Overview of service metrics
+          "1":
+            type: data
+            title: Total Requests
+            query: |
+              timeseries count=sum(http_requests_total), from:-24h
+              | fieldsAdd total=arraySum(count)
+              | fields total
+            visualization: singleValue
+            visualizationSettings:
+              singleValue:
+                showLabel: true
+                label: Requests
+                prefixIcon: chart
+              thresholds: []
+            querySettings:
+              maxResultRecords: 1000
+              defaultScanLimitGbytes: 500
+              maxResultMegaBytes: 100
+              defaultSamplingRatio: 10
+              enableSampling: false
+            davis: {}
+          "2":
+            type: data
+            title: Request Rate Over Time
+            query: |
+              timeseries count=sum(http_requests_total), by:{route}, interval:5m
+              | fieldsAdd rate=count[]/todouble(interval/1m)
+            visualization: lineChart
+            visualizationSettings:
+              chartSettings:
+                truncationMode: middle
+                xAxisLabel: timeframe
+                xAxisScaling: analyzedTimeframe
+                hiddenLegendFields:
+                  - interval
+                fieldMapping:
+                  leftAxisValues:
+                    - count
+                  timestamp: timeframe
+                gapPolicy: connect
+                leftAxisLabel: requests
+              dataMapping:
+                displayedFields:
+                  - route
+              thresholds: []
+            querySettings:
+              maxResultRecords: 1000
+              defaultScanLimitGbytes: 500
+              maxResultMegaBytes: 100
+              defaultSamplingRatio: 10
+              enableSampling: false
+            davis: {}
+          "3":
+            type: data
+            title: Error Traces
+            query: |
+              fetch spans
+              | filter service.name == "my-service" AND status.code == "ERROR"
+              | sort start_time desc
+              | limit 20
+              | fields start_time, trace_id, span.name, duration/1000000 as duration_ms, error.message
+            visualization: table
+            visualizationSettings:
+              tableSettings:
+                showLineNumbers: true
+            querySettings:
+              maxResultRecords: 1000
+              defaultScanLimitGbytes: 500
+              maxResultMegaBytes: 100
+              defaultSamplingRatio: 10
+              enableSampling: false
+            davis: {}
+        layouts:
+          "0":
+            x: 0
+            y: 0
+            w: 24
+            h: 1
+          "1":
+            x: 0
+            y: 1
+            w: 6
+            h: 4
+          "2":
+            x: 6
+            y: 1
+            w: 18
+            h: 6
+          "3":
+            x: 0
+            y: 7
+            w: 24
+            h: 6
+        importedWithCode: false
+        settings: {}
+        annotations: []
+
+    visualization_types:
+      - singleValue      # KPI/metric display
+      - lineChart        # Time series line chart
+      - areaChart        # Stacked area chart
+      - barChart         # Bar chart
+      - pieChart         # Pie/donut chart
+      - table            # Data table
+      - honeycomb        # Honeycomb visualization
+      - heatmap          # Heat map
+
+    tile_types:
+      - markdown         # Markdown text section
+      - data             # DQL query with visualization
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # NOTEBOOK FORMAT (dtctl YAML)
+  # ═══════════════════════════════════════════════════════════════════════════
+  notebook:
+    description: |
+      Dynatrace notebooks for dtctl use a YAML wrapper around the v7 content.
+      Key characteristics:
+      - type: notebook
+      - name: Notebook display name
+      - content.version: "7" (string, not integer)
+      - content.sections: Array of section objects (NOT tiles object like dashboards)
+      - Each section has: id, type, and type-specific content
+      - DQL sections have nested state object with input.value containing the query
+
+      Deployment: dtctl apply -f notebook.yaml
+
+    template: |
+      type: notebook
+      name: "{{notebook_name}}"
+      content:
+        version: "7"
+        defaultTimeframe:
+          from: now()-2h
+          to: now()
+        sections:
+          - id: "section-uuid-1"
+            type: markdown
+            markdown: |
+              # Notebook Title
+
+              This notebook provides diagnostic queries for troubleshooting.
+          - id: "section-uuid-2"
+            type: dql
+            state:
+              input:
+                value: |
+                  fetch spans
+                  | filter service.name == "my-service"
+                  | filter status.code == "ERROR"
+                  | sort start_time desc
+                  | limit 50
+                  | fields start_time, trace_id, span.name, duration/1000000 as duration_ms, error.message
+                timeframe:
+                  from: now()-2h
+                  to: now()
+              visualization: table
+              visualizationSettings:
+                table:
+                  hideColumnsForLargeResults: true
+                autoSelectVisualization: true
+              querySettings:
+                maxResultRecords: 1000
+                defaultScanLimitGbytes: 500
+                maxResultMegaBytes: 1
+                defaultSamplingRatio: 10
+                enableSampling: false
+            davis:
+              includeLogs: true
+              davisVisualization:
+                isAvailable: true
+          - id: "section-uuid-3"
+            type: markdown
+            markdown: |
+              ## Analysis Section
+
+              The query above shows recent errors. Use trace_id to correlate with logs.
+          - id: "section-uuid-4"
+            type: dql
+            state:
+              input:
+                value: |
+                  fetch spans
+                  | filter service.name == "my-service"
+                  | makeTimeseries {
+                      p50=percentile(duration, 50),
+                      p95=percentile(duration, 95),
+                      p99=percentile(duration, 99)
+                    }, interval:5m
+                  | fieldsAdd p50_ms=p50[]/1000000, p95_ms=p95[]/1000000, p99_ms=p99[]/1000000
+                timeframe:
+                  from: now()-2h
+                  to: now()
+              visualization: lineChart
+              visualizationSettings:
+                chartSettings:
+                  fieldMapping:
+                    leftAxisValues:
+                      - p50_ms
+                      - p95_ms
+                      - p99_ms
+                    timestamp: timeframe
+              querySettings:
+                maxResultRecords: 1000
+                defaultScanLimitGbytes: 500
+                maxResultMegaBytes: 1
+                defaultSamplingRatio: 10
+                enableSampling: false
+            davis:
+              includeLogs: true
+              davisVisualization:
+                isAvailable: true
+
+    section_types:
+      - markdown         # Markdown documentation
+      - dql              # DQL query with results
+      - code             # Code snippet (non-executable)
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WORKFLOW FORMAT (dtctl YAML)
+  # ═══════════════════════════════════════════════════════════════════════════
+  workflow:
+    description: |
+      Dynatrace workflows for dtctl use a simplified YAML format.
+      Key characteristics:
+      - title: Workflow title
+      - description: Workflow description
+      - trigger: eventTrigger, schedule, or omit for manual
+      - tasks: Object with task names as keys
+      - Each task has: action, input, and optionally conditions/predecessors
+
+      Deployment: dtctl apply -f workflow.yaml
+
+    template: |
+      title: "{{workflow_title}}"
+      description: "{{workflow_description}}"
+      trigger:
+        # Event-based trigger
+        event:
+          type: events
+          query: event.type == "custom.event.type"
+        # OR Schedule-based trigger
+        # schedule:
+        #   rule: "0 9 * * *"
+        #   timezone: "UTC"
+      tasks:
+        get_data:
+          action: dynatrace.automations:execute-dql-query
+          description: Query error spans
+          input:
+            query: |
+              fetch spans, from:-30m
+              | filter service.name == "my-service"
+              | filter status.code == "ERROR"
+              | summarize error_count=count(), by:{span.name}
+        process_data:
+          action: dynatrace.automations:run-javascript
+          description: Process query results
+          input:
+            script: |
+              import { execution } from '@dynatrace-sdk/automation-utils';
+
+              export default async function ({ execution_id }) {
+                const ex = await execution(execution_id);
+                const result = await ex.result('get_data');
+
+                // Process the data
+                const errors = result.records.filter(r => r.error_count > 10);
+
+                return { high_error_spans: errors };
+              }
+          conditions:
+            custom: "{{ result('get_data').records | length > 0 }}"
+            states:
+              get_data: OK
+          predecessors:
+            - get_data
+        send_notification:
+          action: dynatrace.slack:slack-send-message
+          description: Send Slack notification
+          input:
+            channel: alerts-channel
+            message: |
+              High error rate detected:
+              {{ result('process_data').high_error_spans | join('\n') }}
+            connection: slack-connection-id
+          conditions:
+            custom: "{{ result('process_data').high_error_spans | length > 0 }}"
+            states:
+              process_data: OK
+          predecessors:
+            - process_data
+
+    task_actions:
+      - dynatrace.automations:execute-dql-query    # Execute DQL query
+      - dynatrace.automations:run-javascript        # Run TypeScript/JavaScript
+      - dynatrace.automations:http-request          # Make HTTP request
+      - dynatrace.slack:slack-send-message          # Send Slack message
+      - dynatrace.jira:jira-create-issue            # Create Jira issue
+      - dynatrace.ownership:get-ownership-from-entity  # Get entity owners
+      - dynatrace.davis:davis-analyze               # Davis AI analysis
+
+    trigger_types:
+      event: |
+        trigger:
+          event:
+            type: events
+            query: event.type == "PROBLEM"
+      schedule: |
+        trigger:
+          schedule:
+            rule: "0 9 * * *"
+            timezone: "UTC"
+      manual: |
+        # Omit trigger section entirely for manual-only execution
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DQL QUERY REFERENCE
+  # ═══════════════════════════════════════════════════════════════════════════
+  dql_reference:
+    description: |
+      DQL (Dynatrace Query Language) is used in dashboards, notebooks, and workflows.
+      Key commands and syntax patterns.
+
+    data_sources:
+      - "fetch spans"           # Distributed traces
+      - "fetch logs"            # Log records
+      - "fetch events"          # Events (problems, custom)
+      - "fetch dt.entity.*"     # Entity data (services, hosts, etc.)
+      - "timeseries"            # Metric time series
+
+    common_patterns:
+      filter: |
+        fetch spans
+        | filter service.name == "my-service"
+        | filter status.code == "ERROR"
+        | filter duration > 1000000000
+
+      aggregate: |
+        fetch spans
+        | filter service.name == "my-service"
+        | summarize count=count(), avg_duration=avg(duration), by:{span.name}
+
+      timeseries_metrics: |
+        timeseries {
+          success=sum(http_requests_total, filter:{status_code < 500}),
+          total=sum(http_requests_total)
+        }, interval:5m
+        | fieldsAdd success_rate=(success[]/total[])*100
+
+      percentiles: |
+        fetch spans
+        | filter service.name == "my-service"
+        | summarize {
+            p50=percentile(duration, 50)/1000000,
+            p95=percentile(duration, 95)/1000000,
+            p99=percentile(duration, 99)/1000000
+          }
+
+      lookup_join: |
+        fetch logs
+        | filter loglevel == "ERROR"
+        | lookup [
+            fetch spans
+            | filter span.kind == "SERVER"
+          ], lookupField:trace_id, sourceField:trace_id, fields:{span.name, duration}
+
+      makeTimeseries: |
+        fetch spans
+        | filter service.name == "my-service"
+        | makeTimeseries {
+            p50=percentile(duration, 50),
+            p95=percentile(duration, 95)
+          }, interval:5m
+        | fieldsAdd p50_ms=p50[]/1000000, p95_ms=p95[]/1000000
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DTCTL DEPLOYMENT REFERENCE
+  # ═══════════════════════════════════════════════════════════════════════════
+  deployment:
+    dtctl_commands:
+      apply: |
+        # Deploy any resource (dashboard, notebook, workflow)
+        dtctl apply -f resource.yaml
+
+        # Apply with variable substitution
+        dtctl apply -f resource.yaml --set environment=prod --set service=my-service
+
+        # Dry run to validate before applying
+        dtctl apply -f resource.yaml --dry-run
+
+      get: |
+        # List resources
+        dtctl get dashboards
+        dtctl get notebooks
+        dtctl get workflows
+
+        # Get specific resource as YAML
+        dtctl get dashboard <id> -o yaml > dashboard.yaml
+        dtctl get notebook <id> -o yaml > notebook.yaml
+        dtctl get workflow <id> -o yaml > workflow.yaml
+
+      describe: |
+        # Show detailed info about a resource
+        dtctl describe dashboard <id>
+        dtctl describe notebook <id>
+        dtctl describe workflow <id>
+
+      delete: |
+        # Delete a resource
+        dtctl delete dashboard <id>
+        dtctl delete notebook <id>
+        dtctl delete workflow <id>
+
+      execute: |
+        # Execute a workflow manually
+        dtctl execute workflow <id>
+
+        # Check execution history
+        dtctl get workflow-executions --workflow <id>
+
+      query: |
+        # Run DQL query
+        dtctl query "fetch spans | filter service.name == 'my-service' | limit 10"
+
+        # Run query from file
+        dtctl query -f query.dql
+
+    configuration: |
+      # Configure dtctl context
+      dtctl config set-context my-env \
+        --environment https://abc12345.apps.dynatrace.com \
+        --token-ref my-token
+
+      # Use a specific context
+      dtctl config use-context my-env
+
+      # View current configuration
+      dtctl config view
+
+    best_practices:
+      - Always use --dry-run before applying changes to production
+      - Use variable substitution (--set) for environment-specific values
+      - Export existing resources with `dtctl get -o yaml` as templates
+      - Keep resources in version control
+      - Use descriptive names for dashboards, notebooks, and workflows
