@@ -4,6 +4,7 @@ A comprehensive OpenTelemetry observability expert agent for B-MAD (Breakthrough
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![B-MAD](https://img.shields.io/badge/B--MAD-Agent-blue)](https://github.com/bmad-code-org/BMAD-METHOD)
+[![Documentation](https://img.shields.io/badge/docs-MkDocs-blue)](https://henrikrexed.github.io/bmad-observability-agent/)
 
 ## 🎯 What is this?
 
@@ -93,9 +94,15 @@ ln -s ../.bmad-o11y/.bmad/workflows/*.yaml _bmad/o11y/workflows/
 
 ## 📚 Documentation
 
+**Full documentation:** [https://henrikrexed.github.io/bmad-observability-agent/](https://henrikrexed.github.io/bmad-observability-agent/)
+
 - [Installation Guide](docs/installation.md)
 - [Quick Start Tutorial](docs/quick-start.md)
-- [Workflows Guide](docs/workflows-guide.md)
+- [Recommended 8-Phase Workflow](docs/workflow/recommended-workflow.md)
+- [Cross-Agent Integration](docs/integration/bmad-agents.md)
+- [Collector Best Practices](docs/features/collector-best-practices.md)
+- [Dynatrace Assets](docs/features/dynatrace-assets.md)
+- [All Commands Reference](docs/reference/commands.md)
 - [Examples](docs/examples/)
 
 ## 🎯 Key Features

@@ -341,4 +341,4 @@ After installation:
 3. **Quality Check** - Run `*check-quality` for scoring
 4. **Handoff** - Run `*generate-handoff` for multi-agent collaboration
 
-See [README.md](../README.md) for full documentation.
+See the [Home page](index.md) for full documentation.

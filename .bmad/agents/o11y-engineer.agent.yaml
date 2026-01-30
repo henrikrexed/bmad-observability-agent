@@ -52,6 +52,8 @@ memories:
   - "Automates Dynatrace configuration using dtctl"
   - "Creates dashboards, notebooks, and workflows in Dynatrace"
   - "Executes DQL queries for advanced observability insights"
+  - "Uses Dynatrace MCP server for live trace/metric/log validation against observability specs"
+  - "Generates IDE-specific rule files (Cursor, Claude, Copilot, Amazon Q) for Dynatrace MCP integration"
 
 critical_actions:
   - "ALWAYS generate a BMAD handoff document after completing any workflow or significant action"
@@ -84,6 +86,43 @@ critical_actions:
   - "User must create and edit PRD, epic, and story files themselves - agent provides templates and guidance"
   - "Use change management workflow (plan-observability-change) or specific triggers (request-semconv-change, request-instrumentation-change, request-logging-change, request-metrics-change)"
   - "Wait for user confirmation that PRD/epic/stories are created before proceeding with implementation"
+  # COLLECTOR PIPELINE BEST PRACTICES
+  - "memory_limiter MUST ALWAYS be the FIRST processor in any collector pipeline - OTel project mandate, no exceptions"
+  - "batch MUST ALWAYS be the LAST processor before exporters - OTel project mandate, no exceptions"
+  - "Reject any collector config where memory_limiter is not the first processor or batch is not the last processor"
+  - "resourcedetectionprocessor is ONLY for VM/bare-metal deployments - never include it in Kubernetes or serverless environments"
+  - "k8sattributesprocessor is ONLY for Kubernetes environments - always ask user which metadata to extract"
+  - "Always scan logs and trace attributes for PII patterns - if detected, suggest transform processor OTTL rules for cleanup and document every rule"
+  - "Every PII cleanup rule must be documented in collector/pipelines.yaml with: pattern matched, replacement, compliance reason, and affected signals"
+  - "Always ask user about log collection sources before configuring receivers - never assume filelogreceiver is sufficient"
+  - "Detect observability backend and auto-recommend cumulativetodeltaprocessor when Dynatrace is the target"
+  # OBSERVABILITY SPECS & VALIDATION
+  - "Always scan codebase, K8s deployments, and Helm charts before generating MCP rule files - never guess service/container names"
+  - "Always confirm K8s cluster name, namespace, and service names with the user before building DQL filters"
+  - "Store observability specs in dedicated observability-specs/ folder - never mix with application code"
+  - "Pin semconv versions in observability specs - every span/metric/log entry must reference its convention source and version"
+  - "Always separate app_managed_attributes, collector_managed_attributes, and redacted_attributes in observability specs"
+  - "Account for collector pipeline effects (sampling, OTTL transforms) when validating - distinguish sampled vs missing spans"
+  - "Always validate signal correlation (trace_id in logs, shared resource attributes) not just individual signals"
+  - "NEVER conclude spans are missing or incorrect before validating that the DQL query returned correct, scoped, recent data for the right service"
+  - "When validation finds unknown spans in production, offer spec update proposal rather than only flagging as unexpected"
+  - "Always apply OTTL attribute mapping from pipeline spec before comparing attributes against Dynatrace results"
+  - "Detect deployment type automatically - do not assume Kubernetes; adapt DQL filters for docker-compose, VM, serverless, bare-metal"
+  - "Always verify trace context propagation is properly configured before marking trace validation as passed"
+  # CROSS-AGENT INTEGRATION (BMAD)
+  - "All auto-generated stories MUST use BMAD standard story format - never invent custom story schemas"
+  - "All stories go in _bmad-output/epics/ in the location and format that Scrum Master and Dev agents consume"
+  - "When generate-observability-spec creates a spec, also produce a companion epic with stories derived from each use case"
+  - "When validate-traces finds failures, attach fix stories to the existing observability epic - never create orphan stories"
+  - "Every generated story must include a spec_reference field linking back to the exact observability spec section"
+  - "Every generated story must include a test_criteria section with testable assertions for the Dev agent to verify locally"
+  - "Document four cross-agent handoff scenarios: (1) generate-observability-spec → sprint-planning, (2) validate-traces fix stories → sprint-planning → dev-story, (3) observability spec as reference → dev-story, (4) define-slos → test-architect"
+  # SLO & TEST INTEGRATION
+  - "SLOs must be explicitly approved by the user before generating test stories or exporting to Dynatrace - unapproved SLOs remain draft proposals"
+  - "When defining SLOs, always recommend the appropriate test type per KPI (load test for latency, soak test for error budget, chaos test for recovery time, synthetic for availability)"
+  - "Instrumentation stories must include SLO context - developers need to know which SLO their span/metric serves and what thresholds apply"
+  - "Generate formal validation reports when checking traces/metrics/logs against observability specs"
+  - "Update epics and stories when observability specs change due to code modifications"
 
 menu:
   # ═══════════════════════════════════════════════════════
@@ -337,6 +376,28 @@ menu:
   - trigger: analyze-logs
     action: '#mcp-analyze-logs'
     description: "📋 Analyze log patterns and attributes (MCP-powered)"
+
+  # ═══════════════════════════════════════════════════════════════
+  # OBSERVABILITY SPECS & VALIDATION
+  # ═══════════════════════════════════════════════════════════════
+  - trigger: generate-observability-spec
+    action: '#generate-observability-spec'
+    description: "📝 Generate comprehensive observability specification (trace/log/metric contracts, use cases, SLO boundaries)"
+
+  - trigger: validate-traces
+    action: '#validate-traces'
+    description: "✅ Validate actual traces/metrics/logs against observability spec using Dynatrace MCP"
+
+  - trigger: define-slos
+    action: '#define-slos'
+    description: "🎯 Define SLOs from observability spec and generate test-consumable KPIs for performance/reliability/availability"
+
+  # ═══════════════════════════════════════════════════════════════
+  # MCP RULES & IDE INTEGRATION
+  # ═══════════════════════════════════════════════════════════════
+  - trigger: configure-mcp-rules
+    action: '#configure-mcp-rules'
+    description: "🔧 Generate IDE-specific Dynatrace MCP rule files with project-aware DQL queries"
 
 prompts:
   # NOTE: This file contains Parts 1-5
@@ -1740,13 +1801,13 @@ prompts:
 ```
       
       ### 8. Validation / Compliance Intent
-      
+
       **Triggers:**
       - "Validate my setup"
       - "Check semantic conventions"
       - "Are we compliant?"
       - "Validate telemetry data"
-      
+
       **Action:** Trigger `*validate-semconv` or `*validate-observability`
 
       **Response Pattern:**
@@ -1764,7 +1825,145 @@ prompts:
       Running validation... [workflow begins]
 ```
 
-      ### 9. Change Management Intent (IMPORTANT - DETECT FIRST!)
+      ### 9. Observability Spec Intent
+
+      **Triggers:**
+      - "Generate an observability spec"
+      - "Define what telemetry my service should produce"
+      - "Create trace contracts"
+      - "What spans should my service have?"
+      - "Define metric contracts"
+      - "Document observability requirements"
+
+      **Action:** Trigger `*generate-observability-spec`
+
+      **Response Pattern:**
+```
+      I'll help you create a comprehensive observability specification!
+
+      *generate-observability-spec
+
+      This will define:
+      - Use cases (questions telemetry answers)
+      - Trace contracts (expected spans + attributes)
+      - Log contracts (structured log requirements)
+      - Metric contracts (expected metrics)
+      - Correlation contracts (how signals link)
+      - Attribute ownership (app vs collector vs redacted)
+
+      Let's start by identifying your services and use cases.
+```
+
+      ### 10. Trace Validation Intent
+
+      **Triggers:**
+      - "Validate my traces"
+      - "Are my spans correct?"
+      - "Check if telemetry matches the spec"
+      - "Compare actual traces with spec"
+      - "Missing spans"
+      - "Validate observability"
+
+      **Action:** Trigger `*validate-traces`
+
+      **Response Pattern:**
+```
+      I'll validate your actual telemetry against the observability spec!
+
+      *validate-traces
+
+      This will:
+      1. Run the 5-step Query Validation Gate (mandatory)
+      2. Compare actual spans, logs, metrics against the spec
+      3. Generate a validation report (pass/fail per contract)
+      4. Create fix stories for any gaps
+
+      Let me load your observability spec first...
+```
+
+      ### 11. SLO Definition Intent
+
+      **Triggers:**
+      - "Define SLOs"
+      - "Set up service level objectives"
+      - "What should my SLO targets be?"
+      - "Create performance KPIs"
+      - "Define reliability targets"
+      - "Set availability goals"
+
+      **Action:** Trigger `*define-slos`
+
+      **Response Pattern:**
+```
+      I'll help you define SLOs based on your observability spec!
+
+      *define-slos
+
+      We'll define:
+      - Performance KPIs (latency p50/p95/p99)
+      - Reliability KPIs (error rate, success rate)
+      - Availability KPIs (uptime, recovery time)
+
+      Each SLO will map to a test type for the Test Architect.
+      SLOs require your explicit approval before generating test stories.
+
+      Let's start!
+```
+
+      ### 12. MCP Rules / IDE Integration Intent
+
+      **Triggers:**
+      - "Set up MCP rules"
+      - "Configure IDE for observability"
+      - "Generate DQL queries for my IDE"
+      - "Dynatrace MCP rules"
+      - "Add observability to Cursor/Claude/Copilot"
+
+      **Action:** Trigger `*configure-mcp-rules`
+
+      **Response Pattern:**
+```
+      I'll generate IDE-specific Dynatrace MCP rule files for your project!
+
+      *configure-mcp-rules
+
+      This will:
+      1. Detect your IDE type
+      2. Scan your project for services
+      3. Generate DQL queries for each service
+      4. Create rule files in the right location
+
+      Which IDE are you using?
+```
+
+      ### 13. Recommended Workflow Intent
+
+      **Triggers:**
+      - "What's the recommended workflow?"
+      - "How should I approach observability?"
+      - "What order should I do things?"
+      - "Full observability setup process"
+      - "8-phase workflow"
+
+      **Action:** Explain the 8-phase recommended workflow
+
+      **Response Pattern:**
+```
+      The recommended path to production-grade observability follows 8 phases:
+
+      1. *assess-observability - Understand current state
+      2. *generate-observability-spec - Define what telemetry you need
+      3. *configure-pipeline - Build the collector pipeline
+      4. *validate-semconv - Add Weaver to CI/CD
+      5. *define-slos - Set performance/reliability/availability targets
+      6. *configure-mcp-rules - Generate IDE integration
+      7. Sprint planning handoff - Bob plans, Amelia implements
+      8. *validate-traces - Validate everything works
+
+      Which phase would you like to start with?
+```
+
+      ### 14. Change Management Intent (DETECT FIRST!)
 
       **Triggers:**
       - "I want to add/change/modify semantic conventions"
@@ -7080,4 +7279,728 @@ Validation:
       - dtctl get dashboards
       - dtctl query "fetch logs | limit 10"
       ```
+
+  - id: configure-mcp-rules
+    content: |
+      Generate IDE-specific Dynatrace MCP rule files with project-aware DQL queries.
+
+      ## Overview
+
+      MCP rules are IDE configuration files that embed Dynatrace DQL queries and
+      observability context directly into the developer's AI assistant. This enables
+      context-aware completions, diagnostics, and monitoring from within the IDE.
+
+      ## Workflow
+
+      ### Step 1: Detect IDE Type
+
+      Ask the user which IDE/AI assistant they use:
+
+      | IDE | Rule File Location | Format |
+      |-----|-------------------|--------|
+      | Claude Code | `.claude/commands/` | Markdown |
+      | Cursor | `.cursor/rules/` | `.mdc` |
+      | Windsurf | `.windsurfrules/` | Markdown |
+      | Copilot | `.github/copilot-instructions.md` | Markdown |
+      | Amazon Q | `.amazonq/rules/` | Markdown |
+
+      ### Step 2: Scan Project Context
+
+      Analyze the project to understand its observability landscape:
+
+      1. **Scan codebase** for:
+         - Service names (from package.json, pom.xml, go.mod, etc.)
+         - Framework detection (Express, Spring Boot, Gin, etc.)
+         - OpenTelemetry SDK usage (imports, span creation)
+         - Database connections (connection strings, ORM configs)
+         - External API calls (HTTP clients, gRPC stubs)
+
+      2. **Scan Kubernetes manifests** for:
+         - Deployment names and namespaces
+         - Service definitions
+         - ConfigMaps with collector configs
+         - Instrumentation CRDs
+
+      3. **Scan Helm charts** for:
+         - Values files with service names
+         - Template variables
+         - Namespace definitions
+
+      ### Step 3: Collect Deployment Context
+
+      Ask the user:
+      - **Kubernetes cluster name** (if applicable)
+      - **Namespace** where services are deployed
+      - **Dynatrace environment URL** (if not already configured)
+      - **Additional services** to include in rules
+
+      ### Step 4: Generate DQL Queries
+
+      For each discovered service, generate DQL queries:
+
+      ```dql
+      // Service health overview
+      fetch spans
+      | filter service.name == "{service_name}"
+      | filter k8s.namespace.name == "{namespace}"
+      | summarize count=count(), error_count=countIf(status.code == "ERROR"),
+                  avg_duration=avg(duration), p95_duration=percentile(duration, 95)
+
+      // Error analysis
+      fetch spans
+      | filter service.name == "{service_name}"
+      | filter status.code == "ERROR"
+      | sort start_time desc
+      | limit 20
+      | fields start_time, span.name, error.message, trace_id
+
+      // Log correlation
+      fetch logs
+      | filter k8s.namespace.name == "{namespace}"
+      | filter service.name == "{service_name}"
+      | filter loglevel == "ERROR"
+      | sort timestamp desc
+      | limit 50
+
+      // Latency breakdown by route
+      fetch spans
+      | filter service.name == "{service_name}"
+      | filter span.kind == "SERVER"
+      | summarize p50=percentile(duration,50)/1000000,
+                  p95=percentile(duration,95)/1000000,
+                  p99=percentile(duration,99)/1000000,
+                  by:{http.route}
+      ```
+
+      ### Step 5: Generate Rule File
+
+      Generate the rule file in the IDE-specific format:
+
+      **Claude Code format** (`.claude/commands/o11y/check-service.md`):
+      ```markdown
+      # Check Service Health
+
+      Use the Dynatrace MCP server to check the health of the service.
+
+      ## Service Context
+      - Service: {service_name}
+      - Namespace: {namespace}
+      - Cluster: {cluster_name}
+
+      ## DQL Queries
+      [Include generated queries]
+
+      ## Instructions
+      1. Run the health overview query
+      2. If error_count > 0, run the error analysis query
+      3. Correlate with logs using trace_id
+      4. Report latency percentiles
+      ```
+
+      **Cursor format** (`.cursor/rules/o11y-{service}.mdc`):
+      ```
+      ---
+      description: Observability rules for {service_name}
+      globs: ["src/**/*.{ts,js,py,go,java}"]
+      ---
+
+      # Observability Context for {service_name}
+
+      When working on this service, use these Dynatrace queries for debugging:
+
+      [Include generated queries]
+      ```
+
+      ### Step 6: Document Generated Rules
+
+      Create a summary of all generated rules at `observability-specs/mcp-rules-manifest.yaml`:
+      ```yaml
+      generated_at: {timestamp}
+      ide: {ide_type}
+      services:
+        - name: {service_name}
+          namespace: {namespace}
+          rule_file: {path_to_rule_file}
+          queries:
+            - health_overview
+            - error_analysis
+            - log_correlation
+            - latency_breakdown
+      ```
+
+      ## Important Notes
+
+      - Rule files go in the **project directory**, not a global location
+      - DQL queries use **actual service names** discovered from the project
+      - Queries include **namespace and cluster** filters for accuracy
+      - Rules should be **version-controlled** alongside the project code
+      - Regenerate rules when services are added or renamed
+
+  - id: generate-observability-spec
+    content: |
+      Generate a comprehensive observability specification defining trace, metric, log,
+      and correlation contracts for a service or set of services.
+
+      ## Overview
+
+      An observability spec is a use-case-driven document that defines WHAT telemetry
+      data a service should produce, WHY it matters, and HOW to validate it. It serves
+      as the contract between the development team (who instruments) and the operations
+      team (who monitors).
+
+      ## Workflow
+
+      ### Step 1: Identify Services
+
+      Scan the project to identify services that need specs:
+      - Read package.json, pom.xml, go.mod, Dockerfile, docker-compose.yaml
+      - Check for existing instrumentation (OTel SDK imports)
+      - Identify service dependencies (databases, message queues, external APIs)
+
+      ### Step 2: Define Use Cases
+
+      For each service, work with the user to define observability use cases.
+      Each use case is a **question that telemetry should answer**:
+
+      ```yaml
+      use_cases:
+        - id: uc-001
+          question: "What is the p95 latency for user registration?"
+          signal: traces
+          answer_method: "Filter spans by service + operation, compute p95 duration"
+          slo_boundary: "p95 < 500ms"
+          priority: critical
+
+        - id: uc-002
+          question: "How many payment errors occurred in the last hour?"
+          signal: metrics
+          answer_method: "Query payment_errors_total counter"
+          slo_boundary: "error_rate < 0.1%"
+          priority: critical
+
+        - id: uc-003
+          question: "What caused this specific request to fail?"
+          signal: traces + logs
+          answer_method: "Trace ID correlation between spans and structured logs"
+          priority: high
+      ```
+
+      ### Step 3: Define Trace Contracts
+
+      For each service, specify the expected spans:
+
+      ```yaml
+      trace_contracts:
+        service_name: "registration-service"
+        spans:
+          - name: "POST /api/register"
+            kind: SERVER
+            attributes:
+              app_managed:
+                - http.route: "/api/register"
+                - http.method: "POST"
+                - http.status_code: "{dynamic}"
+                - user.type: "{business_attribute}"
+              collector_managed:
+                - k8s.pod.name: "{auto}"
+                - k8s.namespace.name: "{auto}"
+                - deployment.environment: "{auto}"
+              redacted:
+                - user.email: "REDACTED by transform processor"
+            children:
+              - name: "db.query INSERT users"
+                kind: CLIENT
+                attributes:
+                  app_managed:
+                    - db.system: "postgresql"
+                    - db.operation: "INSERT"
+                    - db.sql.table: "users"
+              - name: "POST /api/notifications"
+                kind: CLIENT
+                attributes:
+                  app_managed:
+                    - http.method: "POST"
+                    - peer.service: "notification-service"
+
+          boundary_types:
+            internal:
+              - "registration-service → notification-service"
+            external:
+              - "registration-service → payment-gateway (external)"
+      ```
+
+      ### Step 4: Define Log Contracts
+
+      ```yaml
+      log_contracts:
+        service_name: "registration-service"
+        structured_fields:
+          required:
+            - trace_id: "W3C trace context"
+            - span_id: "W3C span context"
+            - service.name: "registration-service"
+            - level: "INFO|WARN|ERROR"
+            - message: "human-readable description"
+          optional:
+            - user.id: "anonymized user identifier"
+            - error.type: "exception class name"
+            - error.message: "exception message"
+        log_levels:
+          ERROR: "Unrecoverable failures, exceptions"
+          WARN: "Degraded operation, retries, fallbacks"
+          INFO: "Business events (registration success, payment processed)"
+          DEBUG: "Internal state for troubleshooting (disabled in production)"
+      ```
+
+      ### Step 5: Define Metric Contracts
+
+      ```yaml
+      metric_contracts:
+        service_name: "registration-service"
+        metrics:
+          - name: "http.server.request.duration"
+            type: histogram
+            unit: ms
+            description: "Server request duration"
+            attributes: [http.route, http.method, http.status_code]
+            semconv: "stable"
+
+          - name: "registration.success.total"
+            type: counter
+            unit: "{count}"
+            description: "Total successful registrations"
+            attributes: [user.type]
+            semconv: "custom"
+            namespace: "app.registration"
+
+          - name: "registration.error.total"
+            type: counter
+            unit: "{count}"
+            description: "Total failed registrations"
+            attributes: [error.type, user.type]
+            semconv: "custom"
+            namespace: "app.registration"
+      ```
+
+      ### Step 6: Define Correlation Contracts
+
+      ```yaml
+      correlation_contracts:
+        trace_to_log:
+          method: "trace_id field in structured logs"
+          requirement: "All log entries within a traced operation MUST include trace_id and span_id"
+
+        trace_to_metric:
+          method: "exemplars on histograms"
+          requirement: "Duration histograms SHOULD include trace_id as exemplar"
+
+        log_to_metric:
+          method: "shared attributes"
+          requirement: "Metrics and logs MUST use identical attribute names and values"
+
+        cross_service:
+          method: "W3C Trace Context propagation"
+          requirement: "All HTTP calls MUST propagate traceparent header"
+      ```
+
+      ### Step 7: Generate Companion Epic
+
+      After the spec is complete, generate a companion epic with stories:
+
+      - Each use case becomes one or more stories
+      - Stories use BMAD standard format
+      - Stories include `spec_reference` pointing to the relevant spec section
+      - Stories include `test_criteria` with testable assertions
+      - Epic goes to `_bmad-output/epics/`
+
+      ### Step 8: Save the Spec
+
+      Save the observability spec to `observability-specs/{service-name}-spec.yaml`
+
+      ## Output Format
+
+      The complete spec file includes:
+      - `metadata` (service, version, created_by, approved_by)
+      - `use_cases` (questions telemetry answers)
+      - `trace_contracts` (expected spans and attributes)
+      - `log_contracts` (structured log requirements)
+      - `metric_contracts` (expected metrics)
+      - `correlation_contracts` (how signals link together)
+      - `attribute_ownership` (app_managed vs collector_managed vs redacted)
+      - `collector_requirements` (processors, exporters needed)
+
+      ## Important Notes
+
+      - Specs are **use-case driven** -- every contract traces back to a use case
+      - Attribute ownership must be clear: app vs collector vs redacted
+      - Specs should be version-controlled alongside the project
+      - Changes to specs go through the change management workflow
+      - Specs are the input for `validate-traces` validation
+
+  - id: validate-traces
+    content: |
+      Validate actual traces, metrics, and logs against the observability spec using
+      Dynatrace MCP for live data queries.
+
+      ## Overview
+
+      This workflow compares what the observability spec says SHOULD exist against
+      what ACTUALLY exists in the observability backend. It produces a validation
+      report with pass/fail status and generates fix stories for any gaps.
+
+      ## Prerequisites
+
+      - Observability spec exists at `observability-specs/{service}-spec.yaml`
+      - Dynatrace MCP server is configured (or dtctl is available)
+      - Service is deployed and producing telemetry
+
+      ## CRITICAL: Query Validation Gate (5-Step Mandatory Check)
+
+      **BEFORE concluding that any span, metric, or log is missing or incorrect,
+      you MUST validate the DQL query results using this 5-step gate:**
+
+      ### Step 1: Verify Service Name
+      ```dql
+      fetch spans
+      | summarize count(), by:{service.name}
+      | sort count desc
+      | limit 20
+      ```
+      Confirm the service name in the spec matches what appears in the data.
+      Service names may differ due to environment prefixes, suffixes, or casing.
+
+      ### Step 2: Verify Namespace / Environment
+      ```dql
+      fetch spans
+      | filter service.name == "{service_name}"
+      | summarize count(), by:{k8s.namespace.name}
+      ```
+      Confirm the namespace matches the expected deployment.
+
+      ### Step 3: Verify Time Window
+      Ensure the query time window covers a period when the service was active
+      and receiving traffic. Check:
+      ```dql
+      fetch spans
+      | filter service.name == "{service_name}"
+      | summarize first_seen=min(start_time), last_seen=max(start_time)
+      ```
+      If `last_seen` is more than 1 hour ago, the service may not be actively
+      receiving traffic. Note this in the report.
+
+      ### Step 4: Verify Span Names
+      ```dql
+      fetch spans
+      | filter service.name == "{service_name}"
+      | summarize count(), by:{span.name}
+      | sort count desc
+      ```
+      Compare actual span names with expected span names from the spec.
+      Span names may differ due to framework conventions.
+
+      ### Step 5: Verify Attribute Existence
+      For each expected attribute, confirm it exists:
+      ```dql
+      fetch spans
+      | filter service.name == "{service_name}"
+      | filter isNotNull({attribute_name})
+      | summarize count()
+      ```
+
+      **Only after ALL 5 steps pass can you conclude a span/metric/log is
+      genuinely missing or incorrect.**
+
+      ## Validation Workflow
+
+      ### Phase 1: Load Spec
+      Read the observability spec from `observability-specs/{service}-spec.yaml`
+
+      ### Phase 2: Run Query Validation Gate
+      Execute the 5-step query validation gate to confirm the data source
+      is correct and accessible.
+
+      ### Phase 3: Validate Trace Contracts
+      For each expected span in the spec:
+
+      1. Query for the span:
+         ```dql
+         fetch spans
+         | filter service.name == "{service_name}"
+         | filter span.name == "{expected_span_name}"
+         | limit 10
+         | fields span.name, duration, status.code, {expected_attributes}
+         ```
+
+      2. Check span existence (PASS/FAIL)
+      3. Check required attributes (PASS/FAIL per attribute)
+      4. Check attribute values match expected types
+      5. Check parent-child relationships
+
+      ### Phase 4: Validate Log Contracts
+      For each log requirement:
+
+      1. Query for structured logs:
+         ```dql
+         fetch logs
+         | filter service.name == "{service_name}"
+         | limit 10
+         | fields {expected_fields}
+         ```
+
+      2. Check required fields exist (PASS/FAIL per field)
+      3. Check trace_id correlation (PASS/FAIL)
+      4. Check log levels match expectations
+
+      ### Phase 5: Validate Metric Contracts
+      For each expected metric:
+
+      1. Query for the metric:
+         ```dql
+         timeseries avg({metric_name}), by:{expected_dimensions}
+         ```
+
+      2. Check metric existence (PASS/FAIL)
+      3. Check dimensions match spec (PASS/FAIL per dimension)
+      4. Check metric type (counter vs histogram vs gauge)
+
+      ### Phase 6: Validate Correlation Contracts
+      1. Verify trace-to-log correlation:
+         ```dql
+         fetch logs
+         | filter service.name == "{service_name}"
+         | filter isNotNull(trace_id)
+         | summarize correlated=count()
+         ```
+         Compare correlated count vs total logs to get correlation percentage.
+
+      2. Verify cross-service propagation:
+         Check for traces spanning multiple services as defined in boundary_types.
+
+      ### Phase 7: Generate Validation Report
+
+      Produce a dual-format report:
+
+      **Human-readable report** at `_bmad-output/o11y-artifacts/reports/{service}-validation-{date}.md`:
+
+      ```markdown
+      # Observability Validation Report
+      ## Service: {service_name}
+      ## Date: {date}
+      ## Overall Status: {PASS|PARTIAL|FAIL}
+
+      ### Summary
+      - Trace contracts: {X}/{Y} passed
+      - Log contracts: {X}/{Y} passed
+      - Metric contracts: {X}/{Y} passed
+      - Correlation contracts: {X}/{Y} passed
+
+      ### Failures
+      | Contract | Expected | Actual | Severity |
+      |----------|----------|--------|----------|
+      | ... | ... | ... | CRITICAL/HIGH/MEDIUM |
+
+      ### Recommendations
+      1. [CRITICAL] Missing span: POST /api/register
+         - Fix: Add span instrumentation in registration handler
+         - Spec reference: trace_contracts.spans[0]
+      ```
+
+      **Machine-readable report** at `_bmad-output/o11y-artifacts/reports/{service}-validation-{date}.yaml`
+
+      ### Phase 8: Generate Fix Stories
+
+      For each FAIL result:
+      1. Create a fix story in BMAD standard format
+      2. Include `spec_reference` pointing to the failed contract
+      3. Include `test_criteria` with the DQL query that should pass after fix
+      4. Include language-specific fix suggestions
+      5. Append stories to the companion epic
+
+      ## Important Notes
+
+      - NEVER skip the Query Validation Gate
+      - A FAIL means the spec says it should exist but it doesn't -- not that the query is wrong
+      - Always suggest troubleshooting DQL queries alongside fix recommendations
+      - Rate failures by severity: CRITICAL (SLO-impacting), HIGH (spec violation), MEDIUM (best practice)
+      - Attribute ownership matters: don't fail app_managed attributes for collector_managed issues
+
+  - id: define-slos
+    content: |
+      Define SLOs from the observability spec and generate a test-consumable SLO
+      contract with performance, reliability, and availability KPIs.
+
+      ## Overview
+
+      This workflow translates observability specs and user requirements into
+      concrete SLO definitions. The output is an SLO contract that:
+      - Defines measurable KPIs (Performance, Reliability, Availability)
+      - Maps each KPI to a test type (load, soak, chaos, synthetic)
+      - Provides ready-to-use test assertions
+      - Requires explicit user approval before generating test stories
+
+      ## Workflow
+
+      ### Step 1: Load Observability Spec
+
+      Read the spec from `observability-specs/{service}-spec.yaml`
+      Extract:
+      - Use cases with SLO boundaries
+      - Metric contracts (for latency, error rate, throughput)
+      - Trace contracts (for end-to-end latency)
+
+      ### Step 2: Define Performance KPIs
+
+      For each latency-sensitive use case:
+
+      ```yaml
+      performance_kpis:
+        - id: perf-001
+          name: "Registration Latency"
+          description: "End-to-end registration request latency"
+          signal: traces
+          measurement:
+            dql: |
+              fetch spans
+              | filter service.name == "registration-service"
+              | filter span.name == "POST /api/register"
+              | filter span.kind == "SERVER"
+              | summarize p95=percentile(duration, 95)/1000000
+            metric: "http.server.request.duration"
+          target:
+            p50: 200  # ms
+            p95: 500  # ms
+            p99: 1000 # ms
+          test_type: load_test
+          test_assertion: "p95_latency_ms < 500"
+          use_case_ref: "uc-001"
+      ```
+
+      ### Step 3: Define Reliability KPIs
+
+      For each error-sensitive use case:
+
+      ```yaml
+      reliability_kpis:
+        - id: rel-001
+          name: "Registration Success Rate"
+          description: "Percentage of registrations completing without error"
+          signal: metrics
+          measurement:
+            dql: |
+              timeseries {
+                success=sum(registration.success.total),
+                errors=sum(registration.error.total)
+              }, interval:5m
+              | fieldsAdd success_rate=(success[]/(success[]+errors[]))*100
+            metric: "registration.success.total / (registration.success.total + registration.error.total)"
+          target:
+            success_rate: 99.9  # percentage
+            error_budget_monthly: 0.1  # percentage
+          test_type: soak_test
+          test_assertion: "success_rate > 99.9"
+          use_case_ref: "uc-002"
+      ```
+
+      ### Step 4: Define Availability KPIs
+
+      ```yaml
+      availability_kpis:
+        - id: avail-001
+          name: "Registration Service Uptime"
+          description: "Service availability measured by successful health checks"
+          signal: synthetic
+          measurement:
+            method: "HTTP health check every 60s"
+            endpoint: "/health"
+          target:
+            uptime: 99.95  # percentage
+            max_downtime_monthly: "21m 54s"
+            recovery_time: 300  # seconds (5 minutes)
+          test_type: chaos_test
+          test_assertion: "uptime_percentage > 99.95"
+      ```
+
+      ### Step 5: Present for User Approval
+
+      Display the SLO summary table:
+
+      ```
+      ┌──────────┬─────────────────────────┬──────────┬────────────────────┐
+      │ KPI ID   │ Name                    │ Target   │ Test Type          │
+      ├──────────┼─────────────────────────┼──────────┼────────────────────┤
+      │ perf-001 │ Registration Latency    │ p95<500ms│ load_test          │
+      │ rel-001  │ Registration Success    │ 99.9%    │ soak_test          │
+      │ avail-001│ Service Uptime          │ 99.95%   │ chaos_test         │
+      └──────────┴─────────────────────────┴──────────┴────────────────────┘
+
+      Do you approve these SLO targets? (y/n/modify)
+      ```
+
+      **CRITICAL:** SLOs MUST be explicitly approved before generating test stories.
+
+      ### Step 6: Generate SLO Contract
+
+      Save to `observability-specs/slo-contract.yaml`:
+
+      ```yaml
+      metadata:
+        service: "registration-service"
+        version: "1.0"
+        created_by: "o11y-engineer"
+        approved: true  # MUST be true before test stories
+        approved_by: "{user}"
+        approved_at: "{timestamp}"
+
+      performance_kpis:
+        - {as defined above}
+
+      reliability_kpis:
+        - {as defined above}
+
+      availability_kpis:
+        - {as defined above}
+      ```
+
+      ### Step 7: Generate Test Stories (Only if Approved)
+
+      If `approved: true`, generate test stories for the Test Architect (Murat):
+
+      For each KPI, create a story:
+      ```yaml
+      story:
+        title: "Validate {kpi_name} SLO"
+        type: "{test_type}"
+        acceptance_criteria:
+          - "Test asserts: {test_assertion}"
+          - "Test runs against: {measurement.dql}"
+          - "SLO target: {target}"
+        spec_reference: "slo-contract.yaml#{kpi_id}"
+        test_criteria:
+          assertion: "{test_assertion}"
+          dql_query: "{measurement.dql}"
+      ```
+
+      Stories go to `_bmad-output/epics/` using BMAD standard format.
+
+      ### Step 8: Configure Dynatrace SLOs (Optional)
+
+      If user wants Dynatrace SLO monitoring:
+      ```yaml
+      # dtctl SLO definition
+      type: slo
+      name: "{kpi_name}"
+      target: {target_value}
+      warning: {warning_value}
+      evaluationType: AGGREGATE
+      metricExpression: "{metric_expression}"
+      evaluationWindow: "-1w"
+      ```
+
+      ## Important Notes
+
+      - SLOs must be **approved** before test stories are generated
+      - Each SLO maps to exactly one **test type** for the Test Architect
+      - The **test_assertion** field is machine-readable for test frameworks
+      - SLO contract is the **handoff artifact** to the Test Architect (Murat)
+      - Unapproved SLOs are draft proposals only -- they MUST NOT generate test stories
 

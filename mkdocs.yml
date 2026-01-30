@@ -1,0 +1,84 @@
+site_name: B-MAD Observability Agent
+site_description: Comprehensive OpenTelemetry observability expert agent for B-MAD
+site_author: Henrik Rex (@henrikrexed)
+repo_url: https://github.com/henrikrexed/bmad-observability-agent
+repo_name: henrikrexed/bmad-observability-agent
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quick-start.md
+  - Recommended Workflow:
+    - 8-Phase Workflow: workflow/recommended-workflow.md
+    - Phase 1 - Assessment: workflow/phase-1-assessment.md
+    - Phase 2 - Observability Spec: workflow/phase-2-spec.md
+    - Phase 3 - Collector Configuration: workflow/phase-3-collector.md
+    - Phase 4 - CI/CD with Weaver: workflow/phase-4-cicd.md
+    - Phase 5 - SLO Definition: workflow/phase-5-slos.md
+    - Phase 6 - MCP Rules: workflow/phase-6-mcp-rules.md
+    - Phase 7 - Implementation: workflow/phase-7-implementation.md
+    - Phase 8 - Validation: workflow/phase-8-validation.md
+  - Cross-Agent Integration:
+    - BMAD Agent Interactions: integration/bmad-agents.md
+    - Handoff Scenarios: integration/handoff-scenarios.md
+    - SLO Contract: integration/slo-contract.md
+  - Features:
+    - Observability Specs: features/observability-specs.md
+    - Trace Validation: features/trace-validation.md
+    - MCP Rules Generation: features/mcp-rules.md
+    - Collector Best Practices: features/collector-best-practices.md
+    - PII Cleanup: features/pii-cleanup.md
+    - Dynatrace Assets: features/dynatrace-assets.md
+    - Dynatrace Setup: features/dynatrace-setup.md
+  - Reference:
+    - All Commands: reference/commands.md
+    - Workflows: reference/workflows.md
