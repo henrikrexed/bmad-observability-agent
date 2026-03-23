@@ -1,0 +1,226 @@
+name: "Configure OTTL Transform Processor"
+version: "1.0.0"
+description: "Interactive workflow to create and configure OTTL transform processors for OpenTelemetry Collector"
+
+context:
+  agent: "o11y-engineer"
+  domain: "observability"
+  complexity: "intermediate"
+
+inputs:
+  - name: "use_case"
+    type: "select"
+    description: "What do you want to accomplish with OTTL?"
+    required: true
+    options:
+      - value: "pii_redaction"
+        label: "Redact sensitive data (PII, credentials, etc.)"
+      - value: "enrichment"
+        label: "Enrich telemetry with metadata"
+      - value: "cardinality_control"
+        label: "Control attribute cardinality"
+      - value: "routing"
+        label: "Route data to different backends"
+      - value: "normalization"
+        label: "Normalize and standardize data"
+      - value: "custom"
+        label: "Custom transformation logic"
+  
+  - name: "signal_types"
+    type: "multiselect"
+    description: "Which signal types need transformation?"
+    required: true
+    options:
+      - "traces"
+      - "metrics"
+      - "logs"
+  
+  - name: "deployment_context"
+    type: "select"
+    description: "Where is your OpenTelemetry Collector deployed?"
+    required: true
+    options:
+      - value: "kubernetes"
+        label: "Kubernetes cluster"
+      - value: "docker"
+        label: "Docker container"
+      - value: "vm"
+        label: "Virtual machine / bare metal"
+      - value: "cloud"
+        label: "Cloud service (AWS ECS, Azure Container Instances, etc.)"
+
+steps:
+  - name: "analyze_requirements"
+    description: "Analyze transformation requirements"
+    actions:
+      - type: "prompt"
+        content: |
+          Based on your use case ({{inputs.use_case}}) and signal types ({{inputs.signal_types}}), let me help you create an appropriate OTTL configuration.
+          
+          Please provide more details about your specific requirements:
+          
+          1. **Data patterns**: What specific data needs to be transformed?
+             - For PII redaction: What types of sensitive data (emails, credit cards, IPs)?
+             - For enrichment: What metadata should be added (environment, team, region)?
+             - For cardinality: Which attributes have high cardinality?
+          
+          2. **Source context**: Where is this data coming from?
+             - Which services or applications?
+             - What instrumentation libraries are used?
+          
+          3. **Target requirements**: What's the desired outcome?
+             - Specific attribute names or patterns?
+             - Compliance requirements (GDPR, PCI DSS, HIPAA)?
+
+  - name: "design_transforms"
+    description: "Design OTTL transformation statements"
+    dependencies: ["analyze_requirements"]
+    actions:
+      - type: "execute"
+        tool: "ottl_designer"
+        parameters:
+          use_case: "{{inputs.use_case}}"
+          signal_types: "{{inputs.signal_types}}"
+          requirements: "{{steps.analyze_requirements.output}}"
+      
+      - type: "review"
+        content: |
+          Here's the OTTL configuration I've designed for your use case:
+          
+          ```yaml
+          {{steps.design_transforms.ottl_config}}
+          ```
+          
+          **Key features:**
+          - {{steps.design_transforms.features}}
+          
+          **Important considerations:**
+          - {{steps.design_transforms.considerations}}
+          
+          Does this meet your requirements? Any adjustments needed?
+
+  - name: "generate_collector_config"
+    description: "Generate complete collector configuration"
+    dependencies: ["design_transforms"]
+    actions:
+      - type: "template"
+        template: "collector_config"
+        parameters:
+          deployment_context: "{{inputs.deployment_context}}"
+          transform_config: "{{steps.design_transforms.ottl_config}}"
+          signal_types: "{{inputs.signal_types}}"
+      
+      - type: "output"
+        format: "yaml"
+        filename: "collector-config.yaml"
+        content: "{{steps.generate_collector_config.collector_config}}"
+
+  - name: "create_testing_plan"
+    description: "Create testing and validation plan"
+    dependencies: ["generate_collector_config"]
+    actions:
+      - type: "template"
+        template: "ottl_testing_plan"
+        parameters:
+          use_case: "{{inputs.use_case}}"
+          signal_types: "{{inputs.signal_types}}"
+          transform_statements: "{{steps.design_transforms.statements}}"
+      
+      - type: "output"
+        format: "markdown"
+        filename: "ottl-testing-plan.md"
+        content: "{{steps.create_testing_plan.testing_plan}}"
+
+  - name: "setup_monitoring"
+    description: "Configure monitoring for OTTL processors"
+    dependencies: ["generate_collector_config"]
+    actions:
+      - type: "template"
+        template: "ottl_monitoring"
+        parameters:
+          deployment_context: "{{inputs.deployment_context}}"
+      
+      - type: "guidance"
+        content: |
+          ## Monitoring Your OTTL Transforms
+          
+          To ensure your OTTL transforms are working correctly:
+          
+          ### 1. Enable Debug Logging
+          ```yaml
+          service:
+            telemetry:
+              logs:
+                level: debug
+          ```
+          
+          ### 2. Monitor Processor Metrics
+          - `otelcol_processor_transform_error_mode`
+          - `otelcol_processor_accepted_spans`
+          - `otelcol_processor_refused_spans`
+          
+          ### 3. Set Up Alerts
+          {{steps.setup_monitoring.alerts}}
+          
+          ### 4. Validation Queries
+          {{steps.setup_monitoring.validation_queries}}
+
+outputs:
+  - name: "collector_config"
+    description: "Complete OpenTelemetry Collector configuration with OTTL transforms"
+    type: "file"
+    format: "yaml"
+  
+  - name: "testing_plan"
+    description: "Step-by-step testing and validation plan"
+    type: "file"  
+    format: "markdown"
+  
+  - name: "monitoring_guide"
+    description: "Monitoring and alerting recommendations"
+    type: "guidance"
+
+validation:
+  - name: "syntax_check"
+    description: "Validate OTTL syntax"
+    type: "lint"
+    rules: ["ottl_syntax", "collector_config_schema"]
+  
+  - name: "security_check"
+    description: "Check for potential security issues"
+    type: "security_scan"
+    rules: ["no_secrets_in_config", "pii_redaction_coverage"]
+  
+  - name: "performance_check"
+    description: "Validate performance considerations"
+    type: "performance_analysis"
+    rules: ["cardinality_limits", "processing_efficiency"]
+
+tags:
+  - "ottl"
+  - "transform"
+  - "opentelemetry"
+  - "collector"
+  - "configuration"
+
+examples:
+  - name: "PII Redaction Example"
+    description: "Remove sensitive data from traces and logs"
+    inputs:
+      use_case: "pii_redaction"
+      signal_types: ["traces", "logs"]
+      deployment_context: "kubernetes"
+  
+  - name: "Kubernetes Enrichment Example"  
+    description: "Add cluster and namespace metadata"
+    inputs:
+      use_case: "enrichment"
+      signal_types: ["traces", "metrics"]
+      deployment_context: "kubernetes"
+  
+  - name: "Cardinality Control Example"
+    description: "Limit high-cardinality attributes"
+    inputs:
+      use_case: "cardinality_control"
+      signal_types: ["metrics"]
+      deployment_context: "cloud"

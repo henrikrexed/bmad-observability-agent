@@ -1,0 +1,492 @@
+name: "Instrument Application with OpenTelemetry"
+version: "1.0.0"
+description: "Step-by-step workflow to add OpenTelemetry instrumentation to applications across different languages and frameworks"
+
+context:
+  agent: "o11y-engineer"
+  domain: "observability"
+  skill_level: "beginner-to-advanced"
+
+inputs:
+  - name: "application_language"
+    type: "select"
+    description: "What programming language is your application written in?"
+    required: true
+    options:
+      - value: "nodejs"
+        label: "Node.js (JavaScript/TypeScript)"
+      - value: "python"
+        label: "Python"
+      - value: "java"
+        label: "Java"
+      - value: "go"
+        label: "Go"
+      - value: "dotnet"
+        label: ".NET (C#/F#/VB.NET)"
+      - value: "other"
+        label: "Other language"
+  
+  - name: "application_type"
+    type: "select"
+    description: "What type of application are you instrumenting?"
+    required: true
+    options:
+      - value: "web_api"
+        label: "Web API/REST Service"
+      - value: "web_app"
+        label: "Web Application (Server-side rendered)"
+      - value: "microservice"
+        label: "Microservice"
+      - value: "monolith"
+        label: "Monolithic application"
+      - value: "background_service"
+        label: "Background service/worker"
+      - value: "cli_tool"
+        label: "Command-line tool"
+  
+  - name: "frameworks"
+    type: "multiselect"
+    description: "Which frameworks or libraries does your application use?"
+    required: true
+    options:
+      # Node.js
+      - value: "express"
+        label: "Express.js"
+        applies_to: ["nodejs"]
+      - value: "fastify"
+        label: "Fastify"
+        applies_to: ["nodejs"]
+      - value: "nestjs"
+        label: "NestJS"
+        applies_to: ["nodejs"]
+      # Python
+      - value: "django"
+        label: "Django"
+        applies_to: ["python"]
+      - value: "flask"
+        label: "Flask"
+        applies_to: ["python"]
+      - value: "fastapi"
+        label: "FastAPI"
+        applies_to: ["python"]
+      # Java
+      - value: "spring_boot"
+        label: "Spring Boot"
+        applies_to: ["java"]
+      - value: "spring_mvc"
+        label: "Spring MVC"
+        applies_to: ["java"]
+      - value: "quarkus"
+        label: "Quarkus"
+        applies_to: ["java"]
+      # Go
+      - value: "gin"
+        label: "Gin"
+        applies_to: ["go"]
+      - value: "echo"
+        label: "Echo"
+        applies_to: ["go"]
+      - value: "net_http"
+        label: "net/http (stdlib)"
+        applies_to: ["go"]
+      # .NET
+      - value: "aspnet_core"
+        label: "ASP.NET Core"
+        applies_to: ["dotnet"]
+      - value: "aspnet_mvc"
+        label: "ASP.NET MVC"
+        applies_to: ["dotnet"]
+  
+  - name: "data_stores"
+    type: "multiselect"
+    description: "Which databases or data stores does your application use?"
+    options:
+      - "postgresql"
+      - "mysql"
+      - "mongodb"
+      - "redis"
+      - "elasticsearch"
+      - "cassandra"
+      - "dynamodb"
+      - "none"
+  
+  - name: "deployment_target"
+    type: "select"
+    description: "Where will your application be deployed?"
+    required: true
+    options:
+      - value: "kubernetes"
+        label: "Kubernetes cluster"
+      - value: "docker"
+        label: "Docker containers (non-K8s)"
+      - value: "cloud_native"
+        label: "Cloud native (AWS Lambda, Azure Functions, etc.)"
+      - value: "vm"
+        label: "Virtual machines or bare metal"
+      - value: "development"
+        label: "Local development only"
+  
+  - name: "instrumentation_approach"
+    type: "select"
+    description: "Which instrumentation approach do you prefer?"
+    required: true
+    options:
+      - value: "auto"
+        label: "Automatic instrumentation (minimal code changes)"
+      - value: "manual"
+        label: "Manual instrumentation (full control)"
+      - value: "hybrid"
+        label: "Hybrid approach (auto + custom business logic)"
+
+steps:
+  - name: "analyze_application"
+    description: "Analyze application architecture and requirements"
+    actions:
+      - type: "analysis"
+        content: |
+          Based on your selections:
+          - **Language**: {{inputs.application_language}}
+          - **Type**: {{inputs.application_type}}  
+          - **Frameworks**: {{inputs.frameworks}}
+          - **Data stores**: {{inputs.data_stores}}
+          - **Deployment**: {{inputs.deployment_target}}
+          
+          Let me analyze your application's observability requirements:
+          
+          ### Key Questions:
+          1. What are your main observability goals? (Performance monitoring, error tracking, business metrics)
+          2. Do you have existing monitoring tools or dashboards?
+          3. What's your current deployment frequency?
+          4. Are there specific SLIs/SLOs you need to track?
+          5. Any compliance or security requirements for telemetry data?
+          
+          Please provide additional context about your application's critical paths and observability needs.
+
+  - name: "design_instrumentation_strategy"
+    description: "Create comprehensive instrumentation strategy"
+    dependencies: ["analyze_application"]
+    actions:
+      - type: "strategy_design"
+        parameters:
+          language: "{{inputs.application_language}}"
+          app_type: "{{inputs.application_type}}"
+          frameworks: "{{inputs.frameworks}}"
+          approach: "{{inputs.instrumentation_approach}}"
+      
+      - type: "output"
+        content: |
+          ## Instrumentation Strategy for {{inputs.application_language}} {{inputs.application_type}}
+          
+          ### Recommended Approach: {{steps.design_instrumentation_strategy.approach}}
+          
+          #### Auto-Instrumentation Coverage:
+          {{steps.design_instrumentation_strategy.auto_coverage}}
+          
+          #### Custom Instrumentation Areas:
+          {{steps.design_instrumentation_strategy.custom_areas}}
+          
+          #### Key Metrics to Track:
+          {{steps.design_instrumentation_strategy.key_metrics}}
+          
+          #### Implementation Priority:
+          {{steps.design_instrumentation_strategy.priority_order}}
+
+  - name: "setup_dependencies"
+    description: "Configure dependencies and packages"
+    dependencies: ["design_instrumentation_strategy"]
+    actions:
+      - type: "template"
+        template: "dependency_setup"
+        parameters:
+          language: "{{inputs.application_language}}"
+          frameworks: "{{inputs.frameworks}}"
+          approach: "{{inputs.instrumentation_approach}}"
+      
+      - type: "output"
+        format: "code"
+        filename: "{{steps.setup_dependencies.package_file}}"
+        content: "{{steps.setup_dependencies.dependencies}}"
+      
+      - type: "guidance"
+        content: |
+          ## Dependency Installation
+          
+          {{steps.setup_dependencies.install_instructions}}
+          
+          ### Next Steps:
+          {{steps.setup_dependencies.next_steps}}
+
+  - name: "configure_basic_instrumentation"
+    description: "Set up basic auto-instrumentation"
+    dependencies: ["setup_dependencies"]
+    actions:
+      - type: "template"
+        template: "basic_instrumentation"
+        parameters:
+          language: "{{inputs.application_language}}"
+          frameworks: "{{inputs.frameworks}}"
+          deployment: "{{inputs.deployment_target}}"
+      
+      - type: "output"
+        format: "code"
+        filename: "{{steps.configure_basic_instrumentation.config_file}}"
+        content: "{{steps.configure_basic_instrumentation.basic_config}}"
+      
+      - type: "output"
+        format: "script"
+        filename: "{{steps.configure_basic_instrumentation.startup_script}}"
+        content: "{{steps.configure_basic_instrumentation.startup_commands}}"
+
+  - name: "add_custom_instrumentation"
+    description: "Add custom spans and metrics for business logic"
+    dependencies: ["configure_basic_instrumentation"]
+    condition: "{{inputs.instrumentation_approach}} in ['manual', 'hybrid']"
+    actions:
+      - type: "template"
+        template: "custom_instrumentation"
+        parameters:
+          language: "{{inputs.application_language}}"
+          app_type: "{{inputs.application_type}}"
+          frameworks: "{{inputs.frameworks}}"
+      
+      - type: "output"
+        format: "code"
+        filename: "{{steps.add_custom_instrumentation.example_file}}"
+        content: "{{steps.add_custom_instrumentation.custom_examples}}"
+      
+      - type: "guidance"
+        content: |
+          ## Custom Instrumentation Guidelines
+          
+          ### Business Logic Instrumentation:
+          {{steps.add_custom_instrumentation.business_guidelines}}
+          
+          ### Performance Monitoring:
+          {{steps.add_custom_instrumentation.performance_patterns}}
+          
+          ### Error Tracking:
+          {{steps.add_custom_instrumentation.error_patterns}}
+
+  - name: "configure_data_stores"
+    description: "Add instrumentation for databases and external services"
+    dependencies: ["add_custom_instrumentation"]
+    condition: "{{inputs.data_stores}} != ['none']"
+    actions:
+      - type: "template"
+        template: "datastore_instrumentation"
+        parameters:
+          language: "{{inputs.application_language}}"
+          data_stores: "{{inputs.data_stores}}"
+      
+      - type: "output"
+        format: "code"
+        filename: "{{steps.configure_data_stores.datastore_config}}"
+        content: "{{steps.configure_data_stores.datastore_examples}}"
+      
+      - type: "guidance"
+        content: |
+          ## Database Instrumentation
+          
+          ### Automatic Coverage:
+          {{steps.configure_data_stores.auto_coverage}}
+          
+          ### Custom Database Metrics:
+          {{steps.configure_data_stores.custom_metrics}}
+          
+          ### Query Performance Tracking:
+          {{steps.configure_data_stores.performance_tracking}}
+
+  - name: "setup_logging_correlation"
+    description: "Configure structured logging with trace correlation"
+    dependencies: ["configure_basic_instrumentation"]
+    actions:
+      - type: "template"
+        template: "logging_correlation"
+        parameters:
+          language: "{{inputs.application_language}}"
+          frameworks: "{{inputs.frameworks}}"
+      
+      - type: "output"
+        format: "code"
+        filename: "{{steps.setup_logging_correlation.logging_config}}"
+        content: "{{steps.setup_logging_correlation.logging_examples}}"
+      
+      - type: "guidance"
+        content: |
+          ## Structured Logging Setup
+          
+          ### Log Correlation:
+          {{steps.setup_logging_correlation.correlation_guide}}
+          
+          ### JSON Formatting:
+          {{steps.setup_logging_correlation.json_formatting}}
+          
+          ### Best Practices:
+          {{steps.setup_logging_correlation.best_practices}}
+
+  - name: "create_deployment_config"
+    description: "Generate deployment configuration"
+    dependencies: ["setup_logging_correlation"]
+    actions:
+      - type: "template"
+        template: "deployment_config"
+        parameters:
+          language: "{{inputs.application_language}}"
+          deployment: "{{inputs.deployment_target}}"
+          app_type: "{{inputs.application_type}}"
+      
+      - type: "output"
+        format: "yaml"
+        filename: "{{steps.create_deployment_config.deployment_file}}"
+        content: "{{steps.create_deployment_config.deployment_yaml}}"
+      
+      - type: "output"
+        format: "dockerfile"
+        filename: "Dockerfile"
+        content: "{{steps.create_deployment_config.dockerfile}}"
+        condition: "{{inputs.deployment_target}} in ['kubernetes', 'docker', 'cloud_native']"
+
+  - name: "setup_testing_validation"
+    description: "Create testing approach for instrumentation"
+    dependencies: ["create_deployment_config"]
+    actions:
+      - type: "template"
+        template: "instrumentation_testing"
+        parameters:
+          language: "{{inputs.application_language}}"
+          frameworks: "{{inputs.frameworks}}"
+      
+      - type: "output"
+        format: "code"
+        filename: "{{steps.setup_testing_validation.test_file}}"
+        content: "{{steps.setup_testing_validation.test_examples}}"
+      
+      - type: "output"
+        format: "script"
+        filename: "validate-instrumentation.sh"
+        content: "{{steps.setup_testing_validation.validation_script}}"
+      
+      - type: "guidance"
+        content: |
+          ## Testing Your Instrumentation
+          
+          ### Local Testing:
+          {{steps.setup_testing_validation.local_testing}}
+          
+          ### Integration Testing:
+          {{steps.setup_testing_validation.integration_testing}}
+          
+          ### Production Validation:
+          {{steps.setup_testing_validation.production_validation}}
+
+  - name: "create_monitoring_dashboards"
+    description: "Generate monitoring and alerting recommendations"
+    dependencies: ["setup_testing_validation"]
+    actions:
+      - type: "template"
+        template: "monitoring_setup"
+        parameters:
+          app_type: "{{inputs.application_type}}"
+          frameworks: "{{inputs.frameworks}}"
+      
+      - type: "output"
+        format: "markdown"
+        filename: "monitoring-guide.md"
+        content: "{{steps.create_monitoring_dashboards.monitoring_guide}}"
+      
+      - type: "guidance"
+        content: |
+          ## Monitoring and Alerting
+          
+          ### Key Metrics to Monitor:
+          {{steps.create_monitoring_dashboards.key_metrics}}
+          
+          ### Recommended Alerts:
+          {{steps.create_monitoring_dashboards.alert_rules}}
+          
+          ### Dashboard Templates:
+          {{steps.create_monitoring_dashboards.dashboard_recommendations}}
+
+outputs:
+  - name: "instrumentation_package"
+    description: "Complete instrumentation setup for the application"
+    type: "code_package"
+    contains:
+      - "dependency_configuration"
+      - "instrumentation_code"
+      - "deployment_config"
+      - "testing_suite"
+  
+  - name: "setup_guide"
+    description: "Step-by-step implementation guide"
+    type: "document"
+    format: "markdown"
+  
+  - name: "monitoring_config"
+    description: "Monitoring and alerting recommendations"
+    type: "config_package"
+
+validation:
+  - name: "dependency_check"
+    description: "Validate all required dependencies are included"
+    type: "dependency_analysis"
+  
+  - name: "instrumentation_coverage"
+    description: "Check instrumentation coverage for critical paths"
+    type: "coverage_analysis"
+  
+  - name: "performance_impact"
+    description: "Validate performance impact is acceptable"
+    type: "performance_check"
+  
+  - name: "security_review"
+    description: "Ensure no sensitive data is captured"
+    type: "security_audit"
+
+examples:
+  - name: "Node.js Express API"
+    description: "REST API with PostgreSQL and Redis"
+    inputs:
+      application_language: "nodejs"
+      application_type: "web_api"
+      frameworks: ["express"]
+      data_stores: ["postgresql", "redis"]
+      deployment_target: "kubernetes"
+      instrumentation_approach: "hybrid"
+  
+  - name: "Python FastAPI Microservice"
+    description: "High-performance microservice with MongoDB"
+    inputs:
+      application_language: "python"
+      application_type: "microservice"
+      frameworks: ["fastapi"]
+      data_stores: ["mongodb", "redis"]
+      deployment_target: "kubernetes"
+      instrumentation_approach: "auto"
+  
+  - name: "Java Spring Boot Application"
+    description: "Monolithic web application with MySQL"
+    inputs:
+      application_language: "java"
+      application_type: "monolith"
+      frameworks: ["spring_boot"]
+      data_stores: ["mysql", "redis"]
+      deployment_target: "kubernetes"
+      instrumentation_approach: "hybrid"
+
+best_practices:
+  - "Start with auto-instrumentation for broad coverage"
+  - "Add custom spans only for critical business operations"
+  - "Use structured logging with trace correlation"
+  - "Implement sampling for high-traffic applications"
+  - "Monitor instrumentation overhead in production"
+  - "Validate sensitive data protection"
+  - "Test instrumentation in staging environment"
+
+tags:
+  - "instrumentation"
+  - "opentelemetry"
+  - "observability"
+  - "tracing"
+  - "metrics"
+  - "logging"

@@ -19,6 +19,11 @@ The B-MAD Observability Agent is an AI-powered expert that helps you build produ
 - **🔧 Dynatrace Integration**: Full automation with dtctl (dashboards, workflows, alerting)
 - **🤖 MCP-Powered Discovery**: AI-driven environment discovery and context-aware DQL generation
 - **✅ Quality Checks**: Automated validation and issue remediation
+- **🔄 OTTL Transformations**: Expert guidance for writing OTTL expressions (transform, filter, routing)
+- **🔒 PII & Sensitive Data**: Redaction strategies for telemetry pipelines (emails, credentials, PII)
+- **💻 SDK Instrumentation**: Per-language setup guides (Node.js, Go, Python, Java, .NET)
+- **📋 Sprint-Ready Epics**: Generate observability epics for BMAD sprint planning
+- **🏁 Last Mile**: SLI/SLO/KPI definition + Dynatrace dashboards, SLOs, workflows via dtctl
 
 ## 🚀 Quick Start
 
@@ -92,6 +97,43 @@ ln -s ../.bmad-o11y/.bmad/workflows/*.yaml _bmad/o11y/workflows/
 *assess-observability
 ```
 
+## 🏗️ Architecture: The Observability Architect
+
+The O11y Engineer acts as an **Observability Architect** — it designs and plans but does not implement code directly. It generates epics and stories for the BMAD agent team:
+
+```
+O11y Architect                    BMAD Agent Team
+     │                                 │
+     ├── Assess maturity               │
+     ├── Design observability spec     │
+     ├── Design collector pipeline     │
+     ├── Generate epics ──────────────►│ Bob (Scrum Master) plans sprints
+     │                                 ├──► Amelia (Developer) implements
+     │                                 ├──► Murat (Test Architect) tests
+     │◄── Quality gate (score ≥ 90) ──┤
+     │                                 │
+     └── Last Mile (direct):           │
+         → Define SLI/SLO/KPI         │
+         → dtctl apply dashboards     │
+         → dtctl apply SLOs           │
+         → dtctl apply workflows      │
+```
+
+### Generated Epics
+
+Running `*generate-epics` produces 6 epics across 4 sprints:
+
+| Sprint | Epic | Owner |
+|--------|------|-------|
+| 1 | Assessment & Observability Spec | O11y Architect |
+| 1-2 | Collector Pipeline (OTTL, PII, sampling) | O11y Architect → Amelia |
+| 2 | Custom Collector Distribution (OCB) | O11y Architect → Amelia |
+| 2-3 | Application Instrumentation (per-service) | Amelia |
+| 3 | Observability Test Suite | Murat |
+| 4 | **Last Mile**: SLI/SLO/KPI + Dynatrace | O11y Architect (direct) |
+
+The Last Mile epic is a **quality gate** — it only starts after all tests pass (score ≥ 90).
+
 ## 📚 Documentation
 
 **Full documentation:** [https://henrikrexed.github.io/bmad-observability-agent/](https://henrikrexed.github.io/bmad-observability-agent/)
@@ -99,6 +141,11 @@ ln -s ../.bmad-o11y/.bmad/workflows/*.yaml _bmad/o11y/workflows/
 - [Installation Guide](docs/installation.md)
 - [Quick Start Tutorial](docs/quick-start.md)
 - [Recommended 8-Phase Workflow](docs/workflow/recommended-workflow.md)
+- [OTTL Transformation Guide](docs/features/ottl-guide.md)
+- [Sensitive Data & PII](docs/features/sensitive-data.md)
+- SDK Instrumentation: [Node.js](docs/features/sdk-instrumentation/nodejs.md) | [Go](docs/features/sdk-instrumentation/go.md) | [Python](docs/features/sdk-instrumentation/python.md) | [Java](docs/features/sdk-instrumentation/java.md) | [.NET](docs/features/sdk-instrumentation/dotnet.md)
+- [Dynatrace Assets](docs/features/dynatrace-assets.md)
+- [Cross-Agent Integration](docs/integration/bmad-agents.md)
 - [Cross-Agent Integration](docs/integration/bmad-agents.md)
 - [Collector Best Practices](docs/features/collector-best-practices.md)
 - [Dynatrace Assets](docs/features/dynatrace-assets.md)
@@ -254,6 +301,34 @@ With the [Dynatrace MCP server](https://github.com/dynatrace-oss/dynatrace-mcp),
 *build-diagnostic-notebook # Build troubleshooting notebook
 *suggest-workflows       # Get AI-suggested automations
 ```
+
+### OTTL Transformations
+- Write OTTL expressions for transform, filter, tail sampling, and routing
+- All contexts: resource, scope, span, spanevent, metric, datapoint, log
+- Cache/temp map patterns for complex parsing
+- PII redaction, K8s enrichment, cardinality control, routing
+- Debugging with `service.telemetry.logs.level: debug`
+
+### Sensitive Data & PII Protection
+- Identify PII, credentials, financial data in telemetry
+- OTTL-based redaction (emails, credit cards, IPs, auth headers)
+- Attribute allow/deny lists
+- Log body sanitization and DB statement scrubbing
+- GDPR, HIPAA, PCI-DSS compliance strategies
+
+### Per-Language SDK Instrumentation
+- **Node.js**: Auto-instrumentation, Express/Fastify/NestJS
+- **Go**: SDK setup, context propagation, net/http/gin/echo
+- **Python**: Auto-instrumentation, Flask/Django/FastAPI
+- **Java**: Javaagent, Spring Boot, JVM properties
+- **.NET**: Auto-instrumentation, ASP.NET Core
+
+### Sprint-Ready Epic Generation
+- Dynamic epic generation based on assessment findings
+- 6 epics covering full observability lifecycle
+- Stories in BMAD standard format (assignee, acceptance criteria, DQL assertions)
+- Handoff to Bob (Scrum Master), Amelia (Developer), Murat (Test Architect)
+- Quality gate before Last Mile (score ≥ 90)
 
 ## 📊 Example Output
 ```
