@@ -1,0 +1,356 @@
+name: "Configure PII/Sensitive Data Redaction"
+version: "1.0.0"
+description: "Comprehensive workflow to implement sensitive data protection across the observability pipeline"
+
+context:
+  agent: "o11y-engineer"
+  domain: "observability"
+  priority: "critical"
+  compliance_focus: true
+
+inputs:
+  - name: "compliance_framework"
+    type: "multiselect"
+    description: "Which compliance frameworks apply to your organization?"
+    required: true
+    options:
+      - value: "gdpr"
+        label: "GDPR (General Data Protection Regulation)"
+      - value: "pci_dss"
+        label: "PCI DSS (Payment Card Industry)"
+      - value: "hipaa"
+        label: "HIPAA (Healthcare)"
+      - value: "sox"
+        label: "SOX (Sarbanes-Oxley)"
+      - value: "custom"
+        label: "Custom organizational policies"
+  
+  - name: "data_types"
+    type: "multiselect"
+    description: "What types of sensitive data might appear in your telemetry?"
+    required: true
+    options:
+      - "email_addresses"
+      - "credit_card_numbers"
+      - "social_security_numbers"
+      - "phone_numbers"
+      - "ip_addresses"
+      - "authentication_tokens"
+      - "passwords"
+      - "api_keys"
+      - "personal_names"
+      - "addresses"
+      - "medical_data"
+      - "financial_data"
+  
+  - name: "protection_level"
+    type: "select"
+    description: "What level of protection do you need?"
+    required: true
+    options:
+      - value: "redact"
+        label: "Redact/mask sensitive values"
+      - value: "hash"
+        label: "Hash values for correlation while preserving privacy"
+      - value: "drop"
+        label: "Drop telemetry containing sensitive data entirely"
+      - value: "hybrid"
+        label: "Mixed approach based on data type"
+  
+  - name: "implementation_layers"
+    type: "multiselect"
+    description: "Where should protection be implemented?"
+    required: true
+    options:
+      - value: "sdk"
+        label: "SDK level (application instrumentation)"
+      - value: "collector"
+        label: "Collector level (OTTL processors)"
+      - value: "backend"
+        label: "Backend level (ingestion rules)"
+
+steps:
+  - name: "assess_risk_surface"
+    description: "Analyze potential sources of sensitive data leakage"
+    actions:
+      - type: "analysis"
+        content: |
+          Let me analyze your risk surface based on the compliance frameworks and data types you've selected.
+          
+          ## Risk Assessment
+          
+          Based on {{inputs.compliance_framework}} requirements and {{inputs.data_types}} data types:
+          
+          ### High-Risk Areas:
+          - HTTP request/response headers and bodies
+          - Database query statements with parameters
+          - Log messages from user-facing components
+          - Error messages and stack traces
+          - URL query parameters
+          - Custom span attributes from user input
+          
+          ### Critical Questions:
+          1. Do your applications handle user registration/login flows?
+          2. Are payment transactions processed?
+          3. Do you log full HTTP requests for debugging?
+          4. Are database queries logged with actual parameter values?
+          5. Do error messages include user-provided input?
+          
+          Please provide context about your applications and any specific areas of concern.
+
+  - name: "design_protection_strategy"
+    description: "Create comprehensive protection strategy"
+    dependencies: ["assess_risk_surface"]
+    actions:
+      - type: "strategy_design"
+        parameters:
+          compliance: "{{inputs.compliance_framework}}"
+          data_types: "{{inputs.data_types}}"
+          protection_level: "{{inputs.protection_level}}"
+          layers: "{{inputs.implementation_layers}}"
+      
+      - type: "output"
+        content: |
+          ## Protection Strategy
+          
+          ### Defense-in-Depth Approach
+          
+          #### Layer 1: Application/SDK Level
+          {{steps.design_protection_strategy.sdk_protections}}
+          
+          #### Layer 2: Collector Level  
+          {{steps.design_protection_strategy.collector_protections}}
+          
+          #### Layer 3: Backend Level
+          {{steps.design_protection_strategy.backend_protections}}
+          
+          ### Key Protection Patterns:
+          - **Never-instrument list**: {{steps.design_protection_strategy.never_instrument}}
+          - **Redaction patterns**: {{steps.design_protection_strategy.redaction_patterns}}
+          - **Hashing strategies**: {{steps.design_protection_strategy.hashing_strategies}}
+
+  - name: "generate_sdk_configurations"
+    description: "Create SDK-level protection configurations"
+    dependencies: ["design_protection_strategy"]
+    condition: "{{inputs.implementation_layers}} contains 'sdk'"
+    actions:
+      - type: "template"
+        template: "sdk_protection_config"
+        parameters:
+          data_types: "{{inputs.data_types}}"
+          protection_level: "{{inputs.protection_level}}"
+      
+      - type: "output"
+        format: "code"
+        language: "javascript"
+        filename: "sdk-protection-node.js"
+        content: "{{steps.generate_sdk_configurations.node_config}}"
+      
+      - type: "output"
+        format: "code"
+        language: "python"
+        filename: "sdk-protection-python.py"
+        content: "{{steps.generate_sdk_configurations.python_config}}"
+      
+      - type: "output"
+        format: "code"
+        language: "java"
+        filename: "sdk-protection-java.java"
+        content: "{{steps.generate_sdk_configurations.java_config}}"
+      
+      - type: "output"
+        format: "code"
+        language: "go"
+        filename: "sdk-protection-go.go"
+        content: "{{steps.generate_sdk_configurations.go_config}}"
+
+  - name: "generate_collector_configuration"
+    description: "Create comprehensive collector OTTL configuration"
+    dependencies: ["design_protection_strategy"]
+    condition: "{{inputs.implementation_layers}} contains 'collector'"
+    actions:
+      - type: "template"
+        template: "pii_redaction_collector"
+        parameters:
+          compliance: "{{inputs.compliance_framework}}"
+          data_types: "{{inputs.data_types}}"
+          protection_level: "{{inputs.protection_level}}"
+      
+      - type: "output"
+        format: "yaml"
+        filename: "pii-redaction-collector.yaml"
+        content: |
+          # OpenTelemetry Collector Configuration for PII Protection
+          {{steps.generate_collector_configuration.collector_config}}
+
+  - name: "create_validation_tests"
+    description: "Generate test cases to validate protection effectiveness"
+    dependencies: ["generate_sdk_configurations", "generate_collector_configuration"]
+    actions:
+      - type: "template"
+        template: "pii_validation_tests"
+        parameters:
+          data_types: "{{inputs.data_types}}"
+          protection_patterns: "{{steps.design_protection_strategy.protection_patterns}}"
+      
+      - type: "output"
+        format: "markdown"
+        filename: "pii-validation-tests.md"
+        content: "{{steps.create_validation_tests.test_plan}}"
+      
+      - type: "output"
+        format: "bash"
+        filename: "pii-validation.sh"
+        content: "{{steps.create_validation_tests.validation_script}}"
+
+  - name: "setup_compliance_monitoring"
+    description: "Configure monitoring and alerting for compliance"
+    dependencies: ["generate_collector_configuration"]
+    actions:
+      - type: "template"
+        template: "compliance_monitoring"
+        parameters:
+          compliance: "{{inputs.compliance_framework}}"
+          data_types: "{{inputs.data_types}}"
+      
+      - type: "guidance"
+        content: |
+          ## Compliance Monitoring Setup
+          
+          ### 1. Detection Queries
+          {{steps.setup_compliance_monitoring.detection_queries}}
+          
+          ### 2. Alert Configuration
+          {{steps.setup_compliance_monitoring.alert_rules}}
+          
+          ### 3. Audit Logging
+          {{steps.setup_compliance_monitoring.audit_config}}
+          
+          ### 4. Regular Validation
+          - Schedule weekly scans: {{steps.setup_compliance_monitoring.scan_schedule}}
+          - Monthly compliance reports: {{steps.setup_compliance_monitoring.report_template}}
+
+  - name: "create_incident_response"
+    description: "Develop incident response procedures for data exposure"
+    dependencies: ["setup_compliance_monitoring"]
+    actions:
+      - type: "template"
+        template: "pii_incident_response"
+        parameters:
+          compliance: "{{inputs.compliance_framework}}"
+      
+      - type: "output"
+        format: "markdown"
+        filename: "pii-incident-response-plan.md"
+        content: |
+          # PII Exposure Incident Response Plan
+          {{steps.create_incident_response.response_plan}}
+          
+          ## Emergency Contacts
+          {{steps.create_incident_response.contacts}}
+          
+          ## Immediate Actions
+          {{steps.create_incident_response.immediate_actions}}
+          
+          ## Investigation Procedures
+          {{steps.create_incident_response.investigation_steps}}
+
+outputs:
+  - name: "protection_strategy"
+    description: "Comprehensive protection strategy document"
+    type: "document"
+    format: "markdown"
+  
+  - name: "sdk_configurations"
+    description: "SDK-level protection code for multiple languages"
+    type: "code_package"
+    languages: ["javascript", "python", "java", "go", "csharp"]
+  
+  - name: "collector_configuration"
+    description: "OpenTelemetry Collector configuration with PII protection"
+    type: "file"
+    format: "yaml"
+  
+  - name: "validation_tests"
+    description: "Test suite to validate protection effectiveness"
+    type: "test_suite"
+  
+  - name: "monitoring_setup"
+    description: "Compliance monitoring and alerting configuration"
+    type: "monitoring_config"
+  
+  - name: "incident_response_plan"
+    description: "Procedures for handling data exposure incidents"
+    type: "runbook"
+
+validation:
+  - name: "coverage_check"
+    description: "Ensure all specified data types are protected"
+    type: "coverage_analysis"
+    rules: ["data_type_coverage", "pattern_completeness"]
+  
+  - name: "compliance_validation"
+    description: "Validate against compliance framework requirements"
+    type: "compliance_check"
+    frameworks: "{{inputs.compliance_framework}}"
+  
+  - name: "security_review"
+    description: "Security review of protection mechanisms"
+    type: "security_audit"
+    rules: ["no_bypass_paths", "hash_key_security", "pattern_effectiveness"]
+  
+  - name: "performance_impact"
+    description: "Assess performance impact of protection measures"
+    type: "performance_analysis"
+    metrics: ["latency_increase", "throughput_impact", "resource_usage"]
+
+examples:
+  - name: "GDPR E-commerce Protection"
+    description: "Protect customer PII in e-commerce application"
+    inputs:
+      compliance_framework: ["gdpr"]
+      data_types: ["email_addresses", "personal_names", "addresses", "phone_numbers"]
+      protection_level: "hybrid"
+      implementation_layers: ["sdk", "collector"]
+  
+  - name: "PCI DSS Payment Protection"
+    description: "Secure payment processing telemetry"
+    inputs:
+      compliance_framework: ["pci_dss"]
+      data_types: ["credit_card_numbers", "authentication_tokens"]
+      protection_level: "drop"
+      implementation_layers: ["sdk", "collector", "backend"]
+  
+  - name: "HIPAA Healthcare Protection"
+    description: "Protect patient data in healthcare systems"
+    inputs:
+      compliance_framework: ["hipaa"]
+      data_types: ["medical_data", "social_security_numbers", "personal_names"]
+      protection_level: "hash"
+      implementation_layers: ["sdk", "collector"]
+
+emergency_procedures:
+  - name: "data_exposure_detected"
+    description: "Immediate response when PII exposure is detected"
+    actions:
+      - "Stop telemetry pipeline immediately"
+      - "Isolate exposed data"
+      - "Execute emergency redaction"
+      - "Notify compliance team"
+      - "Begin incident investigation"
+  
+  - name: "compliance_audit"
+    description: "Procedures for compliance audits"
+    actions:
+      - "Generate protection coverage report"
+      - "Provide configuration documentation"
+      - "Demonstrate validation tests"
+      - "Show monitoring evidence"
+
+tags:
+  - "pii"
+  - "gdpr"
+  - "compliance"
+  - "security"
+  - "redaction"
+  - "privacy"
