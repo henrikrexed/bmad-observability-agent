@@ -1,0 +1,508 @@
+name: "Generate Observability Epics for Sprint Planning"
+version: "1.0.0"
+description: "Generate a complete set of observability epics from assessment through last-mile Dynatrace configuration, ready for sprint planning with the BMAD agent team"
+
+context:
+  agent: "o11y-engineer"
+  domain: "observability"
+  complexity: "advanced"
+  handoff_agents:
+    - bob  # Scrum Master — sprint planning
+    - amelia  # Developer — implementation
+    - murat  # Test Architect — test cases
+
+inputs:
+  - name: "project_name"
+    type: "string"
+    description: "Name of the project/application"
+    required: true
+
+  - name: "services"
+    type: "list"
+    description: "List of services to instrument"
+    required: true
+
+  - name: "backend"
+    type: "select"
+    description: "Observability backend"
+    required: true
+    options:
+      - value: "dynatrace"
+        label: "Dynatrace"
+      - value: "grafana"
+        label: "Grafana Cloud / Self-hosted"
+      - value: "generic"
+        label: "Generic OTLP backend"
+
+  - name: "collector_deployment"
+    type: "select"
+    description: "Collector deployment model"
+    required: true
+    options:
+      - value: "kubernetes_daemonset"
+        label: "Kubernetes DaemonSet (per-node)"
+      - value: "kubernetes_deployment"
+        label: "Kubernetes Deployment (centralized)"
+      - value: "kubernetes_gateway"
+        label: "Kubernetes Gateway pattern (agent + gateway)"
+      - value: "docker"
+        label: "Docker Compose"
+      - value: "vm"
+        label: "VM / Bare metal"
+
+  - name: "languages"
+    type: "multiselect"
+    description: "Application languages"
+    required: true
+    options:
+      - value: "nodejs"
+        label: "Node.js"
+      - value: "go"
+        label: "Go"
+      - value: "python"
+        label: "Python"
+      - value: "java"
+        label: "Java"
+      - value: "dotnet"
+        label: ".NET"
+
+  - name: "custom_collector"
+    type: "boolean"
+    description: "Build custom collector distribution with OCB?"
+    default: false
+
+  - name: "pii_required"
+    type: "boolean"
+    description: "Does the pipeline need PII/sensitive data redaction?"
+    default: true
+
+outputs:
+  - name: "epics_yaml"
+    type: "file"
+    path: "_bmad-output/o11y/epics/{{project_name}}-observability-epics.yaml"
+    description: "Complete epic definitions with stories"
+
+  - name: "sprint_plan"
+    type: "file"
+    path: "_bmad-output/o11y/epics/{{project_name}}-sprint-plan.md"
+    description: "Suggested sprint plan for Bob (Scrum Master)"
+
+  - name: "test_contract"
+    type: "file"
+    path: "_bmad-output/o11y/epics/{{project_name}}-test-contract.yaml"
+    description: "Test contract for Murat (Test Architect)"
+
+steps:
+  # =============================================
+  # EPIC 1: Assessment & Observability Spec
+  # =============================================
+  - name: "generate_epic_1"
+    action: "generate"
+    description: "Epic 1: Assessment & Observability Specification"
+    template: |
+      epic:
+        id: "O11Y-E1"
+        title: "Assessment & Observability Specification"
+        description: "Assess current observability maturity and define the observability spec for all services"
+        sprint: 1
+        priority: critical
+        estimated_points: 8
+        stories:
+          - id: "O11Y-E1-S1"
+            title: "Run observability maturity assessment"
+            type: assessment
+            command: "*assess-observability"
+            acceptance_criteria:
+              - "Assessment produces a maturity score (0-100)"
+              - "Gap analysis identifies missing signals per service"
+              - "Priority roadmap generated with effort estimates"
+            assignee: o11y-engineer
+            points: 3
+
+          - id: "O11Y-E1-S2"
+            title: "Generate observability spec per service"
+            type: spec
+            command: "*generate-observability-spec"
+            acceptance_criteria:
+              - "Spec YAML produced for each service: {{services}}"
+              - "Trace contracts define expected spans with attributes"
+              - "Metric contracts define expected instruments"
+              - "Log contracts define structured log format"
+              - "Attribute ownership map (app_managed vs collector_managed)"
+            assignee: o11y-engineer
+            points: 5
+            dependencies: ["O11Y-E1-S1"]
+
+  # =============================================
+  # EPIC 2: Collector Pipeline Configuration
+  # =============================================
+  - name: "generate_epic_2"
+    action: "generate"
+    description: "Epic 2: Collector Pipeline Configuration"
+    template: |
+      epic:
+        id: "O11Y-E2"
+        title: "Collector Pipeline Configuration"
+        description: "Design, configure, and deploy the OpenTelemetry Collector pipeline"
+        sprint: 1-2
+        priority: critical
+        estimated_points: 13
+        stories:
+          - id: "O11Y-E2-S1"
+            title: "Design collector pipeline architecture"
+            type: design
+            command: "*configure-pipeline"
+            acceptance_criteria:
+              - "Deployment model selected: {{collector_deployment}}"
+              - "Receivers configured for all signal types (OTLP)"
+              - "Processor chain follows best practices (memory_limiter → resource → batch)"
+              - "Exporters configured for {{backend}}"
+              - "Pipeline diagram produced"
+            assignee: o11y-engineer
+            points: 3
+
+          - id: "O11Y-E2-S2"
+            title: "Configure OTTL transformations"
+            type: configuration
+            command: "*configure-ottl"
+            acceptance_criteria:
+              - "Resource enrichment rules for K8s metadata"
+              - "Span attribute normalization (HTTP method uppercase, etc.)"
+              - "Metric cardinality control (remove high-cardinality attributes)"
+              - "All OTTL statements tested with debug logging"
+            assignee: o11y-engineer
+            points: 3
+            dependencies: ["O11Y-E2-S1"]
+
+          - id: "O11Y-E2-S3"
+            title: "Configure PII/sensitive data redaction"
+            type: configuration
+            command: "*configure-pii-redaction"
+            condition: "{{pii_required}} == true"
+            acceptance_criteria:
+              - "Email addresses redacted from log bodies"
+              - "Credit card numbers redacted"
+              - "Authorization headers removed from span attributes"
+              - "Database statements scrubbed of literal values"
+              - "Redaction validated with test data"
+            assignee: o11y-engineer
+            points: 3
+            dependencies: ["O11Y-E2-S2"]
+
+          - id: "O11Y-E2-S4"
+            title: "Deploy and validate collector"
+            type: deployment
+            acceptance_criteria:
+              - "Collector deployed as {{collector_deployment}}"
+              - "Health check endpoint responding"
+              - "All receivers accepting data"
+              - "Exporters successfully sending to {{backend}}"
+              - "Resource usage within limits (CPU <500m, Memory <512Mi)"
+            assignee: amelia
+            points: 2
+            dependencies: ["O11Y-E2-S3"]
+
+          - id: "O11Y-E2-S5"
+            title: "Configure tail sampling policies"
+            type: configuration
+            acceptance_criteria:
+              - "Error spans always sampled (100%)"
+              - "Slow spans (>2s) always sampled"
+              - "Normal spans sampled at configured rate"
+              - "Sampling policy validated with production traffic"
+            assignee: o11y-engineer
+            points: 2
+            dependencies: ["O11Y-E2-S4"]
+
+  # =============================================
+  # EPIC 3: Custom Collector Distribution (conditional)
+  # =============================================
+  - name: "generate_epic_3"
+    action: "generate"
+    condition: "{{custom_collector}} == true"
+    description: "Epic 3: Custom Collector Distribution with OCB"
+    template: |
+      epic:
+        id: "O11Y-E3"
+        title: "Custom Collector Distribution"
+        description: "Build an optimized custom collector distribution using the OpenTelemetry Collector Builder (OCB)"
+        sprint: 2
+        priority: high
+        estimated_points: 8
+        stories:
+          - id: "O11Y-E3-S1"
+            title: "Define OCB manifest"
+            type: configuration
+            command: "*build-collector-distro"
+            acceptance_criteria:
+              - "OCB manifest includes only required components"
+              - "No unnecessary receivers/processors/exporters"
+              - "Version pinned to stable release"
+              - "Go replaces configured for any custom components"
+            assignee: o11y-engineer
+            points: 3
+
+          - id: "O11Y-E3-S2"
+            title: "Build and publish custom collector image"
+            type: implementation
+            acceptance_criteria:
+              - "Multi-arch Docker image built (amd64, arm64)"
+              - "Image published to container registry"
+              - "Image size reduced vs contrib distribution"
+              - "Trivy security scan passes (no CRITICAL/HIGH)"
+            assignee: amelia
+            points: 3
+            dependencies: ["O11Y-E3-S1"]
+
+          - id: "O11Y-E3-S3"
+            title: "CI/CD pipeline for collector builds"
+            type: ci-cd
+            acceptance_criteria:
+              - "GitHub Actions workflow builds on tag push"
+              - "Automated version bumping for OTel components"
+              - "Security scanning integrated"
+            assignee: amelia
+            points: 2
+            dependencies: ["O11Y-E3-S2"]
+
+  # =============================================
+  # EPIC 4: Application Instrumentation
+  # =============================================
+  - name: "generate_epic_4"
+    action: "generate"
+    description: "Epic 4: Application Instrumentation"
+    template: |
+      epic:
+        id: "O11Y-E4"
+        title: "Application Instrumentation"
+        description: "Add OpenTelemetry instrumentation to all application services"
+        sprint: 2-3
+        priority: critical
+        estimated_points: "{{len(services) * 5}}"
+        stories_per_service:
+          for_each: "{{services}}"
+          template:
+            - id: "O11Y-E4-{{service}}-S1"
+              title: "Instrument {{service}} with OpenTelemetry"
+              type: instrumentation
+              command: "*instrument-app"
+              acceptance_criteria:
+                - "Auto-instrumentation configured for {{service}}"
+                - "Resource attributes set (service.name, service.version, deployment.environment)"
+                - "OTLP exporter configured pointing to collector"
+                - "All 3 signals enabled (traces, metrics, logs)"
+                - "K8s downward API configured for pod metadata"
+              spec_reference: "observability-specs/{{service}}-spec.yaml"
+              assignee: amelia
+              points: 3
+
+            - id: "O11Y-E4-{{service}}-S2"
+              title: "Validate {{service}} instrumentation"
+              type: validation
+              command: "*validate-traces"
+              acceptance_criteria:
+                - "Spans appear in {{backend}} with correct service.name"
+                - "Semantic conventions followed (http.method, http.status_code, etc.)"
+                - "Context propagation working (parent-child spans connected)"
+                - "No broken traces (orphaned spans)"
+              assignee: o11y-engineer
+              points: 2
+              dependencies: ["O11Y-E4-{{service}}-S1"]
+
+  # =============================================
+  # EPIC 5: Observability Test Suite
+  # =============================================
+  - name: "generate_epic_5"
+    action: "generate"
+    description: "Epic 5: Observability Test Suite"
+    template: |
+      epic:
+        id: "O11Y-E5"
+        title: "Observability Test Suite"
+        description: "Create test cases that validate observability contracts — handoff to Test Architect (Murat)"
+        sprint: 3
+        priority: high
+        estimated_points: 8
+        handoff_to: murat
+        stories:
+          - id: "O11Y-E5-S1"
+            title: "Generate trace contract test cases"
+            type: testing
+            acceptance_criteria:
+              - "Test case per trace contract in observability spec"
+              - "Validates span name, kind, attributes, status code"
+              - "Validates parent-child relationships"
+              - "DQL query assertions for each test"
+            test_types:
+              - unit  # SDK-level span assertions
+              - integration  # End-to-end trace validation
+            assignee: murat
+            points: 3
+
+          - id: "O11Y-E5-S2"
+            title: "Generate metric contract test cases"
+            type: testing
+            acceptance_criteria:
+              - "Test case per metric instrument in observability spec"
+              - "Validates metric name, type, unit, attributes"
+              - "Validates cardinality within bounds"
+              - "DQL query assertions for metric values"
+            assignee: murat
+            points: 2
+            dependencies: ["O11Y-E5-S1"]
+
+          - id: "O11Y-E5-S3"
+            title: "Generate PII redaction test cases"
+            type: testing
+            condition: "{{pii_required}} == true"
+            acceptance_criteria:
+              - "Test data with known PII injected"
+              - "Validates PII is redacted in exported telemetry"
+              - "Validates non-PII data is preserved"
+              - "Negative tests: ensure redaction doesn't break valid data"
+            assignee: murat
+            points: 2
+
+          - id: "O11Y-E5-S4"
+            title: "Run full observability validation suite"
+            type: validation
+            command: "*validate-observability"
+            acceptance_criteria:
+              - "All trace contract tests pass"
+              - "All metric contract tests pass"
+              - "All PII redaction tests pass"
+              - "Quality score ≥ 90 (production-ready)"
+              - "Fix stories generated for any failures"
+            assignee: o11y-engineer
+            points: 1
+            dependencies: ["O11Y-E5-S1", "O11Y-E5-S2", "O11Y-E5-S3"]
+
+  # =============================================
+  # EPIC 6: Last Mile — SLI/SLO/KPI & Dynatrace Configuration
+  # =============================================
+  - name: "generate_epic_6"
+    action: "generate"
+    description: "Epic 6: Last Mile — SLI/SLO/KPI Definition & Dynatrace Configuration"
+    template: |
+      epic:
+        id: "O11Y-E6"
+        title: "Last Mile: SLI/SLO/KPI & Dynatrace Configuration"
+        description: "Define SLIs, SLOs, and KPIs for the project. Configure Dynatrace with dashboards, SLOs, workflows, and alerting — the final step to production-grade observability."
+        sprint: 4
+        priority: critical
+        estimated_points: 13
+        gate: "All tests from Epic 5 must pass before starting"
+        stories:
+          - id: "O11Y-E6-S1"
+            title: "Define SLIs and KPIs per service"
+            type: design
+            command: "*define-slos"
+            acceptance_criteria:
+              - "SLI defined for each critical user journey"
+              - "KPIs defined: availability, latency (p95, p99), error rate, throughput"
+              - "SLI measurement method documented (DQL query for each)"
+              - "Business KPIs mapped to technical SLIs"
+            examples:
+              - "Checkout availability: percentage of successful POST /checkout requests"
+              - "Cart latency P95: 95th percentile of cart service span duration"
+              - "Payment error rate: 5xx responses / total responses"
+            assignee: o11y-engineer
+            points: 3
+
+          - id: "O11Y-E6-S2"
+            title: "Define SLO targets and error budgets"
+            type: design
+            acceptance_criteria:
+              - "SLO target per SLI (e.g., 99.9% availability over 30 days)"
+              - "Error budget calculated per SLO"
+              - "Burn rate alert thresholds defined (2% in 1h = page, 5% in 6h = ticket)"
+              - "SLO approved by stakeholders"
+            assignee: o11y-engineer
+            points: 2
+            dependencies: ["O11Y-E6-S1"]
+
+          - id: "O11Y-E6-S3"
+            title: "Create Dynatrace service health dashboard"
+            type: dynatrace
+            command: "*create-dt-dashboard"
+            tool: "dtctl apply -f dashboard.yaml"
+            acceptance_criteria:
+              - "Dashboard created via dtctl (dashboard-as-code)"
+              - "Service overview tile per service (error rate, latency, throughput)"
+              - "SLO burn rate tiles for each SLO"
+              - "K8s resource usage (CPU, memory per pod)"
+              - "Collector pipeline health (dropped spans, export errors)"
+              - "Dashboard version-controlled in Git"
+            assignee: o11y-engineer
+            points: 2
+            dependencies: ["O11Y-E6-S2"]
+
+          - id: "O11Y-E6-S4"
+            title: "Configure Dynatrace SLOs"
+            type: dynatrace
+            tool: "dtctl apply -f slo.yaml"
+            acceptance_criteria:
+              - "SLO created per service via dtctl"
+              - "DQL-based SLI evaluation configured"
+              - "Target and warning thresholds set"
+              - "Evaluation window configured (7d rolling)"
+              - "SLO visible on dashboard"
+            assignee: o11y-engineer
+            points: 2
+            dependencies: ["O11Y-E6-S3"]
+
+          - id: "O11Y-E6-S5"
+            title: "Configure Dynatrace alerting workflows"
+            type: dynatrace
+            command: "*create-dynatrace-workflow"
+            tool: "dtctl apply -f workflow.yaml"
+            acceptance_criteria:
+              - "Workflow triggers on SLO breach"
+              - "Fast burn alert (2% budget in 1h) → PagerDuty/Slack page"
+              - "Slow burn alert (5% budget in 6h) → Jira ticket"
+              - "Workflow includes DQL context (top errors, affected users)"
+              - "Notification channels tested"
+            assignee: o11y-engineer
+            points: 2
+            dependencies: ["O11Y-E6-S4"]
+
+          - id: "O11Y-E6-S6"
+            title: "Create diagnostic notebook"
+            type: dynatrace
+            command: "*build-diagnostic-notebook"
+            tool: "dtctl apply -f notebook.yaml"
+            acceptance_criteria:
+              - "Notebook per service with pre-built DQL queries"
+              - "Trace analysis section (slowest spans, error breakdown)"
+              - "Log analysis section (error patterns, recent exceptions)"
+              - "Metric analysis section (saturation, utilization)"
+              - "Linked from alerting workflow for quick investigation"
+            assignee: o11y-engineer
+            points: 2
+            dependencies: ["O11Y-E6-S3"]
+
+# =============================================
+# Sprint Plan Suggestion
+# =============================================
+sprint_plan:
+  sprint_1:
+    title: "Foundation"
+    focus: "Assessment, spec, collector pipeline"
+    epics: ["O11Y-E1", "O11Y-E2"]
+    points: 21
+  sprint_2:
+    title: "Instrumentation"
+    focus: "Custom collector (if needed), application instrumentation"
+    epics: ["O11Y-E3", "O11Y-E4 (first half)"]
+    points: "8 + (services * 2.5)"
+  sprint_3:
+    title: "Validation"
+    focus: "Complete instrumentation, test suite, quality gate"
+    epics: ["O11Y-E4 (second half)", "O11Y-E5"]
+    points: "8 + (services * 2.5)"
+  sprint_4:
+    title: "Last Mile"
+    focus: "SLI/SLO/KPI, Dynatrace dashboards, workflows, alerting"
+    epics: ["O11Y-E6"]
+    points: 13
+    gate: "Quality score ≥ 90 from Epic 5"
