@@ -76,9 +76,17 @@ nav:
     - Trace Validation: features/trace-validation.md
     - MCP Rules Generation: features/mcp-rules.md
     - Collector Best Practices: features/collector-best-practices.md
+    - OTTL Transformation Guide: features/ottl-guide.md
+    - Sensitive Data & PII: features/sensitive-data.md
     - PII Cleanup: features/pii-cleanup.md
     - Dynatrace Assets: features/dynatrace-assets.md
     - Dynatrace Setup: features/dynatrace-setup.md
+  - SDK Instrumentation:
+    - Node.js: features/sdk-instrumentation/nodejs.md
+    - Go: features/sdk-instrumentation/go.md
+    - Python: features/sdk-instrumentation/python.md
+    - Java: features/sdk-instrumentation/java.md
+    - .NET: features/sdk-instrumentation/dotnet.md
   - Reference:
     - All Commands: reference/commands.md
     - Workflows: reference/workflows.md

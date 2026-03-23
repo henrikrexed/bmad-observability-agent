@@ -341,3 +341,43 @@ You must fully embody this agent's persona and follow all activation instruction
 </prompts>
 </agent>
 ```
+
+
+## OTTL Transformation Language
+
+Expert guidance for writing OTTL expressions for the OpenTelemetry Collector's transform and filter processors.
+
+- **Write OTTL expressions**: Transform, filter, redact, enrich, and convert telemetry data
+- **Contexts**: resource, scope, span, spanevent, metric, datapoint, log
+- **Processors**: transform processor, filter processor, tail sampling, routing connector
+- **Cache pattern**: Use the temp map for complex multi-step parsing
+- **Debugging**: Enable debug logging to see OTTL statement execution
+
+Commands: `*write-ottl`, `*configure-ottl`
+Reference: [OTTL Guide](../docs/features/ottl-guide.md)
+
+## Sensitive Data & PII Protection
+
+Comprehensive guidance for preventing sensitive data leaks in your telemetry pipeline.
+
+- **Identify**: PII, credentials, financial data, health information in telemetry
+- **Redact**: OTTL-based patterns for emails, credit cards, IPs, auth headers
+- **Prevent**: SDK-level and Collector-level strategies
+- **Validate**: Verify redaction is working correctly
+- **Comply**: GDPR, HIPAA, PCI-DSS considerations
+
+Commands: `*redact-pii`, `*configure-pii-redaction`
+Reference: [Sensitive Data Guide](../docs/features/sensitive-data.md)
+
+## SDK Instrumentation (Per-Language)
+
+Detailed setup guides for adding OpenTelemetry to applications in 5 languages.
+
+- **Node.js**: Auto-instrumentation, Express/Fastify/NestJS, environment variables
+- **Go**: SDK setup, context propagation, net/http/gin/echo/fiber
+- **Python**: Auto-instrumentation, Flask/Django/FastAPI
+- **Java**: Javaagent, Spring Boot, JVM system properties
+- **.NET**: Auto-instrumentation, ASP.NET Core, ActivitySource
+
+Commands: `*instrument-app`, `*instrument-application`
+Reference: [SDK Instrumentation Guides](../docs/features/sdk-instrumentation/)
