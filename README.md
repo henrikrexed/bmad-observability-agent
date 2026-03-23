@@ -146,7 +146,6 @@ The Last Mile epic is a **quality gate** — it only starts after all tests pass
 - SDK Instrumentation: [Node.js](docs/features/sdk-instrumentation/nodejs.md) | [Go](docs/features/sdk-instrumentation/go.md) | [Python](docs/features/sdk-instrumentation/python.md) | [Java](docs/features/sdk-instrumentation/java.md) | [.NET](docs/features/sdk-instrumentation/dotnet.md)
 - [Dynatrace Assets](docs/features/dynatrace-assets.md)
 - [Cross-Agent Integration](docs/integration/bmad-agents.md)
-- [Recommended 8-Phase Workflow](docs/workflow/recommended-workflow.md)
 - [Cross-Agent Integration](docs/integration/bmad-agents.md)
 - [Collector Best Practices](docs/features/collector-best-practices.md)
 - [Dynatrace Assets](docs/features/dynatrace-assets.md)

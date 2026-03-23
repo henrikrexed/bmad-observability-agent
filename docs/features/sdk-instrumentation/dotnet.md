@@ -130,8 +130,8 @@ builder.Services.AddOpenTelemetry()
                 options.Filter = (httpContext) =>
                 {
                     // Skip health checks and metrics endpoints
-                    return !httpContext.Request.Path.Value?.StartsWith("/health") ?? true &&
-                           !httpContext.Request.Path.Value?.StartsWith("/metrics") ?? true;
+                    return (!httpContext.Request.Path.Value?.StartsWith("/health") ?? true) &&
+                           (!httpContext.Request.Path.Value?.StartsWith("/metrics") ?? true);
                 };
                 options.EnrichWithHttpRequest = (activity, httpRequest) =>
                 {
