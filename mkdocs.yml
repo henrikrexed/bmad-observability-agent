@@ -90,3 +90,4 @@ nav:
   - Reference:
     - All Commands: reference/commands.md
     - Workflows: reference/workflows.md
+    - Epic Generation: reference/epic-generation.md
