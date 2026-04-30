@@ -17,12 +17,12 @@
         "name": "Henrik Rex (@henrikrexed)"
       },
       "skills": [
-        "./o11y-setup",
-        "./o11y-engineer",
-        "./o11y-write-ottl",
-        "./o11y-generate-epics",
-        "./o11y-instrument-app",
-        "./o11y-redact-pii"
+        "./skills/o11y-setup",
+        "./skills/o11y-engineer",
+        "./skills/o11y-write-ottl",
+        "./skills/o11y-generate-epics",
+        "./skills/o11y-instrument-app",
+        "./skills/o11y-redact-pii"
       ]
     }
   ]
