@@ -4,20 +4,20 @@ The O11y Engineer provides comprehensive Dynatrace asset management through two 
 
 ## Dashboards
 
-### dtctl-Based: `create-dt-dashboard`
+### dtctl-Based: `CD` (via `/o11y-engineer`)
 
 Generate dashboard YAML files deployed with `dtctl apply`.
 
 ```
-*create-dt-dashboard
+CD
 ```
 
-### MCP-Powered: `build-project-dashboard`
+### MCP-Powered: `PD` (via `/o11y-engineer`)
 
 Auto-discover metrics in your environment and build dashboards from real data.
 
 ```
-*build-project-dashboard
+PD
 ```
 
 ### Dashboard YAML Format
@@ -115,18 +115,18 @@ dtctl apply -f dashboard.yaml             # Deploy
 
 Notebooks are interactive investigation documents combining markdown, DQL queries, and visualizations.
 
-### dtctl-Based: `create-dt-notebook`
+### dtctl-Based: `DN` (via `/o11y-engineer`)
 
 ```
-*create-dt-notebook
+DN
 ```
 
-### MCP-Powered: `build-diagnostic-notebook`
+### MCP-Powered: `DB` (via `/o11y-engineer`)
 
 Auto-discover data schema and generate contextually accurate notebooks.
 
 ```
-*build-diagnostic-notebook
+DB
 ```
 
 ### Notebook YAML Format
@@ -202,18 +202,18 @@ content:
 
 Dynatrace workflows automate incident response, remediation, and reporting.
 
-### dtctl-Based: `create-dt-workflow`
+### dtctl-Based: `CW` (via `/o11y-engineer`)
 
 ```
-*create-dt-workflow
+CW
 ```
 
-### MCP-Powered: `suggest-workflows`
+### MCP-Powered: `SW` (via `/o11y-engineer`)
 
 Analyze your environment and recommend automation opportunities.
 
 ```
-*suggest-workflows
+SW
 ```
 
 ### Workflow YAML Format
@@ -288,12 +288,12 @@ tasks:
 
 ## MCP vs dtctl Comparison
 
-| Capability | dtctl Command | MCP Command |
-|-----------|---------------|-------------|
-| Dashboards | `create-dt-dashboard` | `build-project-dashboard` |
-| Notebooks | `create-dt-notebook` | `build-diagnostic-notebook` |
-| Workflows | `create-dt-workflow` | `suggest-workflows` |
-| Discovery | Manual input | `discover-services` (auto) |
+| Capability | dtctl Command (via `/o11y-engineer`) | MCP Command (via `/o11y-engineer`) |
+|-----------|--------------------------------------|-------------------------------------|
+| Dashboards | `CD` (Create Dashboard) | `PD` (Project Discovery Dashboard) |
+| Notebooks | `DN` (Diagnostic Notebook) | `DB` (Dashboard Builder) |
+| Workflows | `CW` (Create Workflow) | `SW` (Suggest Workflows) |
+| Discovery | Manual input | Discover services via MCP |
 | Best for | CI/CD, GitOps | Interactive, prototyping |
 
 ### Using Both Together

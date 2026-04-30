@@ -1,6 +1,6 @@
 # Phase 8: Validation
 
-**Command:** `*validate-traces`
+**Menu Code:** `VO` (via `/o11y-engineer`)
 
 **Goal:** Verify that actual traces, metrics, and logs match the observability spec. Produce validation reports and generate fix stories for gaps.
 

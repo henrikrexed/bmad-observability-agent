@@ -44,4 +44,4 @@ Regenerate rules when:
 - Namespace or cluster changes
 - DQL queries need updating
 
-Run `*configure-mcp-rules` to regenerate.
+Run the configure MCP rules flow (via `/o11y-engineer`) to regenerate.

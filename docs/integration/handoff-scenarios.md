@@ -6,21 +6,21 @@ This page documents common scenarios where the O11y Engineer hands off work to o
 
 **Flow:** O11y Engineer -> Bob -> Amelia -> O11y Engineer
 
-1. User runs `*assess-observability` (score: 0)
-2. O11y Engineer runs `*generate-observability-spec` -- produces spec + companion epic
-3. O11y Engineer runs `*configure-pipeline` -- produces collector YAML
-4. O11y Engineer runs `*define-slos` -- produces SLO contract
+1. User runs `AM` (Assess Maturity via `/o11y-engineer`) (score: 0)
+2. O11y Engineer runs observability spec generation -- produces spec + companion epic
+3. O11y Engineer runs `CP` (Configure Pipeline via `/o11y-engineer`) -- produces collector YAML
+4. O11y Engineer runs SLO definition -- produces SLO contract
 5. **Handoff to Bob:** Epic with instrumentation stories at `_bmad-output/epics/`
 6. **Bob plans sprint:** Assigns stories to Amelia
 7. **Amelia implements:** Uses `spec_reference` for guidance
-8. **Handoff back to O11y:** User runs `*validate-traces`
+8. **Handoff back to O11y:** User runs `VO` (Validate Observability via `/o11y-engineer`)
 9. If failures: fix stories generated, sent back to Bob
 
 ## Scenario 2: Existing Project Improvement
 
 **Flow:** O11y Engineer -> Bob -> Amelia
 
-1. User runs `*assess-observability` (score: 65)
+1. User runs `AM` (Assess Maturity via `/o11y-engineer`) (score: 65)
 2. Assessment identifies gaps (missing SLOs, incomplete traces)
 3. O11y Engineer generates improvement stories
 4. **Handoff to Bob:** Improvement stories appended to existing epic
@@ -31,7 +31,7 @@ This page documents common scenarios where the O11y Engineer hands off work to o
 
 **Flow:** O11y Engineer -> Murat
 
-1. User runs `*define-slos` -- produces SLO contract
+1. User runs SLO definition -- produces SLO contract
 2. User approves SLO targets
 3. **Handoff to Murat:** SLO contract at `observability-specs/slo-contract.yaml`
 4. **Murat designs tests:**
@@ -56,7 +56,7 @@ This page documents common scenarios where the O11y Engineer hands off work to o
 
 **Flow:** O11y Engineer -> Bob -> Amelia -> O11y Engineer (iterative)
 
-1. User runs `*validate-traces` after initial implementation
+1. User runs `VO` (Validate Observability via `/o11y-engineer`) after initial implementation
 2. Validation finds 4 failures (2 HIGH, 2 MEDIUM)
 3. O11y Engineer generates 4 fix stories with:
    - `spec_reference` to failed contract
@@ -64,14 +64,14 @@ This page documents common scenarios where the O11y Engineer hands off work to o
    - Language-specific fix suggestions
 4. **Handoff to Bob:** Fix stories appended to epic
 5. **Amelia fixes:** Implements per fix story
-6. User runs `*validate-traces` again
+6. User runs `VO` (Validate Observability via `/o11y-engineer`) again
 7. Repeat until all pass
 
 ## Scenario 6: Architecture Consultation
 
 **Flow:** O11y Engineer <-> Winston
 
-1. During `*configure-pipeline`, a topology decision arises
+1. During `CP` (Configure Pipeline via `/o11y-engineer`), a topology decision arises
 2. O11y Engineer presents options to Winston:
    - DaemonSet (agent) pattern
    - Deployment (gateway) pattern

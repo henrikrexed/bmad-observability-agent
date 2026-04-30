@@ -1,6 +1,6 @@
 # Phase 6: MCP Rules
 
-**Command:** `*configure-mcp-rules`
+**Command:** Configure MCP rules (via `/o11y-engineer`)
 
 **Goal:** Generate IDE-specific rule files that embed Dynatrace DQL queries and observability context directly into the developer's AI assistant.
 

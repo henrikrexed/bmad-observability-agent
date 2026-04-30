@@ -1,0 +1,7 @@
+module,skill,display-name,menu-code,description,action,args,phase,after,before,required,output-location,outputs
+O11y Engineer,o11y-setup,Setup O11y Module,SO,"Install or update O11y Engineer module config and help entries.",configure,"{-H: headless mode}|{inline values: skip prompts with provided values}",anytime,,,false,{project-root}/_bmad,config.yaml and config.user.yaml
+O11y Engineer,o11y-engineer,O11y Architect,OA,"Senior Observability Engineer and OpenTelemetry specialist for assessment, design, and planning.",agent,,anytime,,,false,,
+O11y Engineer,o11y-write-ottl,Write OTTL,WO,"Generate OTTL expressions for OpenTelemetry transform, filter, and routing processors.",,,anytime,,,false,o11y_artifacts,OTTL processor configuration
+O11y Engineer,o11y-generate-epics,Generate Epics,GE,"Generate observability epics and stories for BMAD sprint planning.",,,anytime,,,false,o11y_artifacts,epic YAML and sprint plan
+O11y Engineer,o11y-instrument-app,Instrument App,IA,"Add OpenTelemetry instrumentation to applications with per-language guidance.",,,anytime,,,false,o11y_artifacts,instrumentation configuration
+O11y Engineer,o11y-redact-pii,Redact PII,RP,"Configure PII and sensitive data redaction for OpenTelemetry pipelines.",,,anytime,,,false,o11y_artifacts,redaction configuration

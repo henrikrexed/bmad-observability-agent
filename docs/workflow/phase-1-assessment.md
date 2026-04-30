@@ -1,6 +1,6 @@
 # Phase 1: Observability Assessment
 
-**Command:** `*assess-observability`
+**Menu Code:** `AM` (via `/o11y-engineer`)
 
 **Goal:** Understand the current state of observability and produce a maturity score with an improvement roadmap.
 
@@ -77,7 +77,7 @@ The assessment produces a prioritized list of actions, each with:
 
 - **Priority** (CRITICAL / HIGH / MEDIUM / LOW)
 - **Points gained** if addressed
-- **Command to fix** (e.g., `*configure-pipeline`)
+- **Command to fix** (e.g., `CP`)
 - **Effort estimate**
 
 ## Next Step

@@ -1,6 +1,6 @@
 # Epic Generation Reference
 
-The O11y Engineer generates observability epics dynamically based on your project's assessment. Run `*generate-epics` to produce sprint-ready stories.
+The O11y Engineer generates observability epics dynamically based on your project's assessment. Run `/o11y-generate-epics` to produce sprint-ready stories.
 
 ## Epic Overview
 

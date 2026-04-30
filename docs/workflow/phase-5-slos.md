@@ -1,6 +1,6 @@
 # Phase 5: SLO Definition
 
-**Command:** `*define-slos`
+**Menu Code:** Define SLOs with `/o11y-engineer`
 
 **Goal:** Define performance, reliability, and availability targets based on the observability spec, producing an SLO contract that the Test Architect can consume.
 

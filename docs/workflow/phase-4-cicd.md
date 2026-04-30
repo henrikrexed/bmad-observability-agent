@@ -1,6 +1,6 @@
 # Phase 4: CI/CD with Weaver
 
-**Command:** `*validate-semconv`
+**Menu Code:** `VS` (via `/o11y-engineer`)
 
 **Goal:** Integrate OpenTelemetry Weaver into the CI/CD pipeline for automated semantic convention validation.
 

@@ -35,66 +35,29 @@ The B-MAD Observability Agent is an AI-powered expert that helps you build produ
 
 ### Installation
 
-**Option 1: BMAD Installer (Recommended)**
 ```bash
-# Install via BMAD CLI (requires BMAD Core installed)
-npx bmad install https://github.com/henrikrexed/bmad-observability-agent
-
-# Or if using npm package (coming soon)
-npx bmad install @henrikrexed/bmad-o11y
+# Install via BMad CLI (requires BMad Method v6.3+ installed)
+npx bmad-method install --custom-source https://github.com/henrikrexed/bmad-observability-agent
 ```
 
 The installer will:
-- Copy agent and workflows to `_bmad/o11y/`
-- Register in agent and workflow manifests
-- Create IDE-specific command files (Claude Code, Cursor, Windsurf)
-- Set up output directories
-
-**Option 2: Manual Installation**
-```bash
-# Clone this repository
-git clone https://github.com/henrikrexed/bmad-observability-agent.git
-
-# Copy to your BMAD project
-cp -r bmad-observability-agent/agents/ <your-project>/_bmad/o11y/agents/
-cp -r bmad-observability-agent/.bmad/workflows/ <your-project>/_bmad/o11y/workflows/
-
-# For Claude Code, also copy commands
-mkdir -p <your-project>/.claude/commands/bmad/o11y
-cp -r bmad-observability-agent/.claude/commands/bmad/o11y/* <your-project>/.claude/commands/bmad/o11y/
-```
-
-**Option 3: Git submodule**
-```bash
-# Add as submodule to your project
-git submodule add https://github.com/henrikrexed/bmad-observability-agent.git .bmad-o11y
-
-# Symlink the agent and workflows
-ln -s ../.bmad-o11y/agents/o11y-engineer.md _bmad/o11y/agents/
-ln -s ../.bmad-o11y/.bmad/workflows/*.yaml _bmad/o11y/workflows/
-```
+- Install 6 skills to `.claude/skills/` (o11y-setup, o11y-engineer, o11y-write-ottl, o11y-generate-epics, o11y-instrument-app, o11y-redact-pii)
+- Run the setup skill to configure your observability backend, collector deployment, and language preferences
+- Register capabilities in the BMad help system
 
 ### First Use
 
-**Claude Code:**
-```bash
-# Invoke the agent
-/bmad:o11y:agents:o11y-engineer
-
-# Or run a workflow directly
-/bmad:o11y:workflows:observability-quick-start
+Invoke the O11y Engineer agent:
+```
+/o11y-engineer
 ```
 
-**Other AI Assistants:**
-```bash
-# Invoke the agent
-*o11y-engineer
-
-# Start with quick-start for new projects
-*quick-start
-
-# Or assess existing observability
-*assess-observability
+Or run a specific capability directly:
+```
+/o11y-write-ottl        # Generate OTTL expressions
+/o11y-generate-epics    # Create sprint-ready epics
+/o11y-instrument-app    # Add OTel to your app
+/o11y-redact-pii        # Configure PII redaction
 ```
 
 ## 🏗️ Architecture: The Observability Architect
@@ -121,7 +84,7 @@ O11y Architect                    BMAD Agent Team
 
 ### Generated Epics
 
-Running `*generate-epics` produces 6 epics across 4 sprints:
+Running `/o11y-generate-epics` produces 6 epics across 4 sprints:
 
 | Sprint | Epic | Owner |
 |--------|------|-------|
@@ -146,9 +109,7 @@ The Last Mile epic is a **quality gate** — it only starts after all tests pass
 - SDK Instrumentation: [Node.js](docs/features/sdk-instrumentation/nodejs.md) | [Go](docs/features/sdk-instrumentation/go.md) | [Python](docs/features/sdk-instrumentation/python.md) | [Java](docs/features/sdk-instrumentation/java.md) | [.NET](docs/features/sdk-instrumentation/dotnet.md)
 - [Dynatrace Assets](docs/features/dynatrace-assets.md)
 - [Cross-Agent Integration](docs/integration/bmad-agents.md)
-- [Cross-Agent Integration](docs/integration/bmad-agents.md)
 - [Collector Best Practices](docs/features/collector-best-practices.md)
-- [Dynatrace Assets](docs/features/dynatrace-assets.md)
 - [All Commands Reference](docs/reference/commands.md)
 - [Examples](docs/examples/)
 
@@ -156,24 +117,21 @@ The Last Mile epic is a **quality gate** — it only starts after all tests pass
 
 ### Intelligent Intent Detection
 
-Ask natural questions and get the right workflow:
+Ask natural questions via `/o11y-engineer` and get the right workflow:
 ```
 You: "How do I know if my observability is good?"
-Agent: *assess-observability
-        Runs comprehensive quality checks and provides roadmap
+Agent: Runs comprehensive quality checks and provides roadmap (QC menu)
 
 You: "I need to create custom metrics"
-Agent: *create-custom-semconv
-        Guides you through semantic convention design with Weaver
+Agent: Guides you through semantic convention design with Weaver (SC menu)
 
 You: "My collector keeps crashing"
-Agent: *diagnose-pipeline
-        Identifies issues and provides fixes
+Agent: Identifies issues and provides fixes (DP menu)
 ```
 
 ### Comprehensive Quality Checks
 
-Run `*check-quality` to assess:
+Select `QC` from the O11y Engineer menu to assess:
 - ✅ Signal coverage (traces, metrics, logs)
 - ✅ Semantic convention compliance
 - ✅ Cardinality management
@@ -184,17 +142,17 @@ Score: 0-100 with actionable recommendations
 
 ### Production-Grade Workflows
 
-| Workflow | Purpose | Time |
-|----------|---------|------|
-| `*quick-start` | Complete observability setup from scratch | 2-4 weeks |
-| `*assess-observability` | Maturity assessment + improvement roadmap | 30 min |
-| `*configure-pipeline` | Design OTel Collector pipeline | 1-2 hours |
-| `*build-collector-distro` | Build custom collector with OCB | 2-4 hours |
-| `*validate-semconv` | Validate against semantic conventions | 1 hour |
-| `*create-dt-dashboard` | Create Dynatrace dashboard as code | 30 min |
-| `*build-project-dashboard` | Build dashboard with discovered metrics (MCP) | 15 min |
-| `*build-diagnostic-notebook` | Build diagnostic notebook (MCP) | 15 min |
-| `*suggest-workflows` | AI-suggested automation workflows (MCP) | 10 min |
+| Capability | Purpose | Time |
+|------------|---------|------|
+| `/o11y-engineer` → `QS` | Complete observability setup from scratch | 2-4 weeks |
+| `/o11y-engineer` → `AM` | Maturity assessment + improvement roadmap | 30 min |
+| `/o11y-engineer` → `CP` | Design OTel Collector pipeline | 1-2 hours |
+| `/o11y-engineer` → `BD` | Build custom collector with OCB | 2-4 hours |
+| `/o11y-engineer` → `SC` | Validate against semantic conventions | 1 hour |
+| `/o11y-engineer` → `DD` | Create Dynatrace dashboard as code | 30 min |
+| `/o11y-engineer` → `PD` | Build dashboard with discovered metrics (MCP) | 15 min |
+| `/o11y-engineer` → `DB` | Build diagnostic notebook (MCP) | 15 min |
+| `/o11y-engineer` → `SW` | AI-suggested automation workflows (MCP) | 10 min |
 
 ## 💡 Use Cases
 
@@ -218,20 +176,20 @@ Score: 0-100 with actionable recommendations
 
 ## 🤝 Multi-Agent Collaboration (BMAD)
 
-This agent supports seamless handoff to other BMAD agents:
+This agent supports seamless handoff to other BMAD agents via `/o11y-engineer`:
 
 ```bash
 # Generate handoff for next agent
-*generate-handoff
+Select HO from the O11y Engineer menu
 
 # Create epics/stories for tracking
-*create-epic
+/o11y-generate-epics
 
 # Get machine-readable status
-*status-report
+Select SR from the O11y Engineer menu
 
 # Sync from previous agent session
-*sync-status
+Select SS from the O11y Engineer menu
 ```
 
 **Handoff Output Example:**
@@ -293,13 +251,10 @@ With the [Dynatrace MCP server](https://github.com/dynatrace-oss/dynatrace-mcp),
 - **Suggest workflows** - Based on recurring problems and patterns
 
 ```bash
-# MCP-powered commands
-*discover-services       # Find services in Dynatrace
-*discover-metrics        # Find available metrics
-*analyze-logs           # Analyze log patterns
-*build-project-dashboard # Build dashboard with real metrics
-*build-diagnostic-notebook # Build troubleshooting notebook
-*suggest-workflows       # Get AI-suggested automations
+# MCP-powered capabilities (via /o11y-engineer menu)
+PD  # Build dashboard with real metrics
+DB  # Build troubleshooting notebook
+SW  # Get AI-suggested automations
 ```
 
 ### OTTL Transformations
@@ -332,7 +287,7 @@ With the [Dynatrace MCP server](https://github.com/dynatrace-oss/dynatrace-mcp),
 
 ## 📊 Example Output
 ```
-*check-quality
+/o11y-engineer → select QC
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OBSERVABILITY QUALITY REPORT
@@ -349,18 +304,18 @@ Overall Score: 78/100 ⚠️  NEEDS IMPROVEMENT
 ⚠️  WARNINGS (5 checks):
   ! Semantic Convention Compliance - 87% (12/15 pts)
     Target: 95%+
-    Fix: *validate-semconv
+    Fix: /o11y-engineer → SC
 
 ❌ FAILURES (3 checks):
   ✗ SLOs Not Configured (0/10 pts) 🚨 CRITICAL
-    Fix: *configure-dt-alerting
+    Fix: /o11y-engineer → DA
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PRIORITY ACTIONS TO REACH 95+ (PRODUCTION-READY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. [CRITICAL] Configure SLOs (+10 pts)
-   *configure-dt-alerting
+   /o11y-engineer → DA
    Effort: 1 day
 ```
 

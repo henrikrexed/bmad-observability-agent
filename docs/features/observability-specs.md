@@ -43,7 +43,7 @@ This separation prevents:
 
 ## Generating a Spec
 
-Run `*generate-observability-spec` to start the guided process:
+Run the generate spec flow (via `/o11y-engineer`) to start the guided process:
 
 1. Identify services
 2. Define use cases per service
@@ -63,4 +63,4 @@ When a spec is generated, a companion epic with instrumentation stories is creat
 
 ## Validating Against Specs
 
-After implementation, run `*validate-traces` to compare actual telemetry against the spec. See [Trace Validation](trace-validation.md).
+After implementation, run `VO` (Validate Observability via `/o11y-engineer`) to compare actual telemetry against the spec. See [Trace Validation](trace-validation.md).

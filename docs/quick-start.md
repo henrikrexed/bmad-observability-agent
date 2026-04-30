@@ -4,39 +4,34 @@ Get from zero to production-grade observability using the B-MAD O11y Engineer ag
 
 ## Prerequisites
 
-- [B-MAD Method](https://github.com/bmad-code-org/BMAD-METHOD) installed (v6+)
-- Node.js v20+
+- [B-MAD Method](https://github.com/bmad-code-org/BMAD-METHOD) installed (v6.3+)
 - AI assistant (Claude Code, Cursor, Windsurf, etc.)
 - A project with at least one service to instrument
 
-## Step 1: Install the Agent
+## Step 1: Install the Module
 
 See the [Installation Guide](installation.md) for detailed instructions. The quickest path:
 
 ```bash
-npx bmad install https://github.com/henrikrexed/bmad-observability-agent
+npx bmad-method install --custom-source https://github.com/henrikrexed/bmad-observability-agent
 ```
 
 ## Step 2: Start the Agent
 
-=== "Claude Code"
+Invoke the O11y Engineer:
 
-    ```bash
-    /bmad:o11y:agents:o11y-engineer
-    ```
+```
+/o11y-engineer
+```
 
-=== "Other AI Assistants"
-
-    ```
-    *o11y-engineer
-    ```
+The agent will greet you and display a numbered menu of all available capabilities.
 
 ## Step 3: Run the Assessment
 
-Start by understanding your current observability state:
+Start by understanding your current observability state. Select **AM** from the menu or run:
 
 ```
-*assess-observability
+Select: AM (Assess Observability Maturity)
 ```
 
 The assessment evaluates:
@@ -64,24 +59,26 @@ Based on your assessment, follow the [recommended 8-phase workflow](workflow/rec
 
 ## Step 5: Validate
 
-After implementation, validate that your telemetry matches the spec:
+After implementation, validate that your telemetry matches the spec. Select **VO** from the agent menu:
 
 ```
-*validate-traces
+Select: VO (Validate Observability Setup)
 ```
 
 This runs the mandatory 5-step Query Validation Gate and produces a detailed report.
 
 ## Common First Commands
 
-| Command | Purpose |
-|---------|---------|
-| `*assess-observability` | Evaluate current observability maturity |
-| `*generate-observability-spec` | Create observability specifications |
-| `*configure-pipeline` | Design OTel Collector pipeline |
-| `*define-slos` | Define SLOs and KPIs |
-| `*check-quality` | Run quality checks (0-100 score) |
-| `*quick-start` | Full guided setup from scratch |
+| Agent Menu Code | Skill | Purpose |
+|-----------------|-------|---------|
+| AM | `/o11y-engineer` | Evaluate current observability maturity |
+| QS | `/o11y-engineer` | Full guided setup from scratch |
+| CP | `/o11y-engineer` | Design OTel Collector pipeline |
+| QC | `/o11y-engineer` | Run quality checks (0-100 score) |
+| WO | `/o11y-write-ottl` | Write OTTL expressions |
+| GE | `/o11y-generate-epics` | Generate sprint-ready epics |
+| IA | `/o11y-instrument-app` | Add OpenTelemetry to apps |
+| RP | `/o11y-redact-pii` | Configure PII redaction |
 
 ## Next Steps
 

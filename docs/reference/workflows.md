@@ -1,6 +1,6 @@
 # Workflows
 
-The O11y Engineer provides workflows that can be invoked through the B-MAD framework. These are the structured, multi-step processes available.
+The O11y Engineer provides 18 workflows accessible through the agent menu (`/o11y-engineer`). Workflows are structured, multi-step processes that guide you through complex observability tasks.
 
 ## Available Workflows
 
@@ -8,7 +8,7 @@ The O11y Engineer provides workflows that can be invoked through the B-MAD frame
 
 Interactive guide to set up comprehensive observability from scratch.
 
-**Trigger:** `*quick-start`
+**Menu Code:** `QS`
 
 **Steps:**
 
@@ -23,7 +23,7 @@ Interactive guide to set up comprehensive observability from scratch.
 
 Assess current observability maturity and get improvement roadmap.
 
-**Trigger:** `*assess-observability`
+**Menu Code:** `AM`
 
 **Output:** Maturity score (0-100), gap analysis, prioritized roadmap
 
@@ -31,7 +31,7 @@ Assess current observability maturity and get improvement roadmap.
 
 Design and configure OpenTelemetry Collector pipeline.
 
-**Trigger:** `*configure-pipeline`
+**Menu Code:** `CP`
 
 **Output:** Complete collector YAML with correct processor ordering
 
@@ -39,7 +39,7 @@ Design and configure OpenTelemetry Collector pipeline.
 
 Build custom OpenTelemetry Collector distribution using OCB.
 
-**Trigger:** `*build-collector-distro`
+**Menu Code:** `BC`
 
 **Output:** OCB manifest, Dockerfile, deployment configs
 
@@ -47,7 +47,7 @@ Build custom OpenTelemetry Collector distribution using OCB.
 
 Validate telemetry data against OpenTelemetry semantic conventions using Weaver.
 
-**Trigger:** `*validate-semconv`
+**Menu Code:** `VS`
 
 **Output:** Compliance report, Weaver configuration
 
@@ -55,7 +55,7 @@ Validate telemetry data against OpenTelemetry semantic conventions using Weaver.
 
 Create custom semantic conventions using Weaver schema format.
 
-**Trigger:** `*create-custom-semconv`
+**Menu Code:** `CS`
 
 **Output:** Weaver schema files, generated code
 
@@ -63,15 +63,55 @@ Create custom semantic conventions using Weaver schema format.
 
 Validate observability setup against vendor requirements and best practices.
 
-**Trigger:** `*validate-observability`
+**Menu Code:** `VO`
 
 **Output:** Validation report with pass/fail per check
+
+### configure-ottl
+
+Interactive OTTL transform processor configuration.
+
+**Menu Code:** `OT`
+
+**Output:** Complete transform processor YAML with OTTL statements
+
+### configure-pii-redaction
+
+Comprehensive PII/sensitive data protection workflow.
+
+**Menu Code:** `PR`
+
+**Output:** PII redaction processor configuration, compliance validation
+
+### instrument-application
+
+Add OpenTelemetry instrumentation to applications across languages.
+
+**Menu Code:** `IA` (via skill)
+
+**Output:** Per-language instrumentation configuration
+
+### generate-observability-epics
+
+Generate complete observability epics for sprint planning.
+
+**Menu Code:** `GE` (via skill)
+
+**Output:** Epic YAML, sprint plan, test contract
+
+### observability-change-management
+
+Manage changes to semantic conventions, instrumentation, logging, metrics.
+
+**Menu Code:** `CM`
+
+**Output:** Impact analysis, change checklist, PRD update request
 
 ### setup-dynatrace
 
 Set up Dynatrace integration with OpenTelemetry.
 
-**Trigger:** `*setup-dynatrace`
+**Menu Code:** `SD`
 
 **Output:** dtctl context configuration, token setup
 
@@ -79,7 +119,7 @@ Set up Dynatrace integration with OpenTelemetry.
 
 Create Dynatrace dashboards for observability metrics.
 
-**Trigger:** `*create-dt-dashboard`
+**Menu Code:** `CD`
 
 **Output:** Dashboard YAML file for dtctl
 
@@ -87,7 +127,7 @@ Create Dynatrace dashboards for observability metrics.
 
 Create Dynatrace automation workflows.
 
-**Trigger:** `*create-dt-workflow`
+**Menu Code:** `CW`
 
 **Output:** Workflow YAML file for dtctl
 
@@ -95,7 +135,7 @@ Create Dynatrace automation workflows.
 
 Build project-specific observability dashboards using MCP discovery.
 
-**Trigger:** `*build-project-dashboard`
+**Menu Code:** `PD`
 
 **Output:** Dashboard based on actual environment metrics
 
@@ -103,7 +143,7 @@ Build project-specific observability dashboards using MCP discovery.
 
 Build Dynatrace diagnostic notebooks for troubleshooting.
 
-**Trigger:** `*build-diagnostic-notebook`
+**Menu Code:** `DB`
 
 **Output:** Notebook with service-specific investigation queries
 
@@ -111,44 +151,42 @@ Build Dynatrace diagnostic notebooks for troubleshooting.
 
 Get AI-powered suggestions for Dynatrace automation workflows.
 
-**Trigger:** `*suggest-workflows`
+**Menu Code:** `SW`
 
 **Output:** Top 5 recommended automation workflows
 
 ## Workflow Invocation
 
-### Claude Code
-
-```bash
-# Via slash commands
-/bmad:o11y:workflows:observability-quick-start
-/bmad:o11y:workflows:assess-observability-maturity
-/bmad:o11y:workflows:configure-collector-pipeline
-
-# Via agent triggers
-*quick-start
-*assess-observability
-*configure-pipeline
-```
-
-### Other AI Assistants
+All workflows are accessed through the O11y Engineer agent:
 
 ```
-# Via agent triggers
-*quick-start
-*assess-observability
-*configure-pipeline
+# Invoke the agent
+/o11y-engineer
+
+# Then select a workflow by code or number
+QS    # Quick Start
+AM    # Assess Maturity
+CP    # Configure Pipeline
+```
+
+Or invoke specific skills directly:
+
+```
+/o11y-write-ottl        # OTTL expressions
+/o11y-generate-epics    # Epic generation
+/o11y-instrument-app    # App instrumentation
+/o11y-redact-pii        # PII redaction
 ```
 
 ## Recommended Order
 
 For new projects, follow the [8-Phase Workflow](../workflow/recommended-workflow.md):
 
-1. `*assess-observability`
-2. `*generate-observability-spec`
-3. `*configure-pipeline`
-4. `*validate-semconv`
-5. `*define-slos`
-6. `*configure-mcp-rules`
-7. Sprint planning handoff
-8. `*validate-traces`
+1. `AM` — Assess observability maturity
+2. Design observability spec
+3. `CP` — Configure collector pipeline
+4. `VS` — Validate semantic conventions
+5. Define SLOs
+6. Configure MCP rules
+7. Sprint planning handoff (`GE`)
+8. `VO` — Validate observability setup
