@@ -1,102 +1,113 @@
 # All Commands
 
-Complete reference of O11y Engineer commands organized by category.
+Complete reference of O11y Engineer capabilities organized by category.
 
-## Observability Assessment
+The O11y Engineer agent (`/o11y-engineer`) provides a menu-driven interface. You can also invoke specific skills directly.
 
-| Command | Description |
-|---------|-------------|
-| `*assess-observability` | Comprehensive maturity assessment (0-100 score) |
-| `*check-quality` | Run quality checks with pass/fail per criterion |
+## Skills (Direct Invocation)
 
-## Observability Specs & Validation
+| Skill | Description |
+|-------|-------------|
+| `/o11y-engineer` | Full agent with 28 menu items |
+| `/o11y-write-ottl` | Generate OTTL expressions for transform/filter/routing |
+| `/o11y-generate-epics` | Generate observability epics for sprint planning |
+| `/o11y-instrument-app` | Add OpenTelemetry instrumentation to applications |
+| `/o11y-redact-pii` | Configure PII and sensitive data redaction |
+| `/o11y-setup` | Reconfigure module settings |
 
-| Command | Description |
-|---------|-------------|
-| `*generate-observability-spec` | Create use-case-driven observability specification |
-| `*validate-traces` | Validate telemetry against spec using Dynatrace MCP |
-| `*define-slos` | Define SLOs and generate test-consumable KPIs |
+## Agent Menu Items
 
-## Collector Configuration
+When you invoke `/o11y-engineer`, the following menu items are available. Use the **Code** column to quickly select an item.
 
-| Command | Description |
-|---------|-------------|
-| `*configure-pipeline` | Design OTel Collector pipeline |
-| `*build-collector-distro` | Build custom collector with OCB |
-| `*diagnose-pipeline` | Troubleshoot collector issues |
+### BMAD Collaboration
 
-## Instrumentation
+| Code | Description |
+|------|-------------|
+| HO | Generate BMAD Handoff Document |
 
-| Command | Description |
-|---------|-------------|
-| `*adjust-instrumentation` | Configure or improve instrumentation |
-| `*auto-instrumentation` | Set up K8s auto-instrumentation operator |
-| `*score-instrumentation` | Score instrumentation quality (0-100) |
+### Quick Start & Assessment
 
-## Semantic Conventions
+| Code | Description |
+|------|-------------|
+| QS | Quick Start — Setup observability from scratch |
+| AM | Assess Observability Maturity |
+| QC | Run Observability Quality Checks |
+| BP | Observability Best Practices |
 
-| Command | Description |
-|---------|-------------|
-| `*validate-semconv` | Validate against OpenTelemetry semantic conventions |
-| `*create-custom-semconv` | Create custom conventions with Weaver |
-| `*validate-observability` | Full observability setup validation |
+### Collector Pipeline
 
-## IDE Integration
+| Code | Description |
+|------|-------------|
+| CP | Configure Collector Pipeline |
+| DP | Diagnose Pipeline Issues |
+| OC | Optimize Metric Cardinality |
 
-| Command | Description |
-|---------|-------------|
-| `*configure-mcp-rules` | Generate IDE-specific MCP rule files with DQL |
+### OTTL Transformations
 
-## Dynatrace (dtctl)
+| Code | Description |
+|------|-------------|
+| OT | Configure OTTL Transformations (workflow) |
+| WO | Write OTTL Expressions (skill) |
 
-| Command | Description |
-|---------|-------------|
-| `*setup-dynatrace` | Initial dtctl setup and configuration |
-| `*create-dt-dashboard` | Create dashboard YAML for dtctl |
-| `*create-dt-notebook` | Create notebook YAML for dtctl |
-| `*create-dt-workflow` | Create workflow YAML for dtctl |
-| `*configure-dt-alerting` | Configure SLOs, alerting, management zones |
-| `*run-dt-query` | Execute DQL queries |
-| `*export-dt-config` | Export Dynatrace configuration |
-| `*validate-dt-config` | Validate configuration before deployment |
-| `*dt-synthetic-monitoring` | Configure synthetic monitors |
+### Instrumentation
 
-## Dynatrace (MCP-Powered)
+| Code | Description |
+|------|-------------|
+| AI | Auto-Instrumentation Setup |
+| IA | Instrument Application (skill) |
+| SI | Calculate Instrumentation Score |
 
-| Command | Description |
-|---------|-------------|
-| `*check-mcp` | Verify MCP server connection |
-| `*discover-services` | Discover services via MCP |
-| `*discover-metrics` | Discover available metrics via MCP |
-| `*analyze-logs` | Analyze log patterns via MCP |
-| `*build-project-dashboard` | Build dashboard from real metrics |
-| `*build-diagnostic-notebook` | Build diagnostic notebook from real data |
-| `*suggest-workflows` | Get AI-suggested automation workflows |
+### PII & Sensitive Data
 
-## Change Management
+| Code | Description |
+|------|-------------|
+| RP | Redact PII & Sensitive Data (skill) |
+| PR | Configure PII Redaction Pipeline (workflow) |
 
-| Command | Description |
-|---------|-------------|
-| `*request-semconv-change` | Request semantic convention change |
-| `*request-instrumentation-change` | Request instrumentation change |
-| `*request-logging-change` | Request logging change |
-| `*request-metrics-change` | Request metrics change |
-| `*plan-observability-change` | Plan multi-area observability change |
+### Validation
 
-## Cross-Agent (BMAD)
+| Code | Description |
+|------|-------------|
+| VO | Validate Observability Setup |
 
-| Command | Description |
-|---------|-------------|
-| `*generate-handoff` | Generate handoff document for next agent |
-| `*create-epic` | Create epic with stories |
-| `*status-report` | Machine-readable status report |
-| `*sync-status` | Sync from previous agent session |
+### Semantic Conventions (Weaver)
 
-## Utility
+| Code | Description |
+|------|-------------|
+| VS | Validate Semantic Conventions |
+| CS | Create Custom Semantic Conventions |
+| GD | Generate SemConv Documentation |
+| GC | Generate Instrumentation Code from SemConv |
 
-| Command | Description |
-|---------|-------------|
-| `*export-configuration` | Export complete observability config as IaC |
-| `*vendor-check` | Check vendor compatibility |
-| `*cardinality-check` | Analyze attribute cardinality |
-| `*quick-start` | Full guided setup from scratch |
+### Collector Builder (OCB)
+
+| Code | Description |
+|------|-------------|
+| BC | Build Custom Collector (OCB) |
+| LC | List Collector Components |
+| VM | Validate OCB Manifest |
+
+### Dynatrace
+
+| Code | Description |
+|------|-------------|
+| SD | Setup Dynatrace Integration |
+| CD | Create Dynatrace Dashboard |
+| CW | Create Dynatrace Workflow |
+| DQ | Run DQL Query |
+| DN | Create Dynatrace Notebook |
+
+### MCP-Powered Features
+
+| Code | Description |
+|------|-------------|
+| PD | Build Project Dashboard (MCP) |
+| DB | Build Diagnostic Notebook (MCP) |
+| SW | Suggest Dynatrace Workflows (MCP) |
+
+### Sprint Planning
+
+| Code | Description |
+|------|-------------|
+| GE | Generate Observability Epics (skill) |
+| CM | Observability Change Management |

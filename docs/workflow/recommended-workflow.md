@@ -29,14 +29,14 @@ graph LR
 
 | Phase | Name | Command | Output |
 |-------|------|---------|--------|
-| 1 | [Assessment](phase-1-assessment.md) | `*assess-observability` | Maturity score, gap analysis, roadmap |
-| 2 | [Observability Spec](phase-2-spec.md) | `*generate-observability-spec` | Spec file + companion epic |
-| 3 | [Collector Config](phase-3-collector.md) | `*configure-pipeline` | Collector YAML, processor ordering |
-| 4 | [CI/CD with Weaver](phase-4-cicd.md) | `*validate-semconv` | Weaver config, CI pipeline |
-| 5 | [SLO Definition](phase-5-slos.md) | `*define-slos` | SLO contract, test stories |
-| 6 | [MCP Rules](phase-6-mcp-rules.md) | `*configure-mcp-rules` | IDE rule files with DQL |
-| 7 | [Implementation](phase-7-implementation.md) | Sprint planning handoff | Stories assigned to dev agents |
-| 8 | [Validation](phase-8-validation.md) | `*validate-traces` | Validation report, fix stories |
+| 1 | [Assessment](phase-1-assessment.md) | `AM` via `/o11y-engineer` | Maturity score, gap analysis, roadmap |
+| 2 | [Observability Spec](phase-2-spec.md) | Design spec with agent | Spec file + companion epic |
+| 3 | [Collector Config](phase-3-collector.md) | `CP` via `/o11y-engineer` | Collector YAML, processor ordering |
+| 4 | [CI/CD with Weaver](phase-4-cicd.md) | `VS` via `/o11y-engineer` | Weaver config, CI pipeline |
+| 5 | [SLO Definition](phase-5-slos.md) | Define SLOs with agent | SLO contract, test stories |
+| 6 | [MCP Rules](phase-6-mcp-rules.md) | Configure MCP rules | IDE rule files with DQL |
+| 7 | [Implementation](phase-7-implementation.md) | `/o11y-generate-epics` | Stories assigned to dev agents |
+| 8 | [Validation](phase-8-validation.md) | `VO` via `/o11y-engineer` | Validation report, fix stories |
 
 ## Phase Details
 

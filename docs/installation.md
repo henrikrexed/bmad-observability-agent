@@ -2,131 +2,109 @@
 
 ## Prerequisites
 
-1. **AI Assistant** with BMAD support
+1. **BMad Method v6.3+** installed in your project
+   - See [Install BMad](https://docs.bmad-method.org/how-to/install-bmad/)
+2. **AI Assistant** with BMad support
    - Claude Code
    - Cursor
    - Windsurf
-   - Claude.ai (web interface)
-
-2. **Git** for cloning the repository
+3. **Git** for cloning the repository
 
 ## Repository Structure
 
 ```
 bmad-observability-agent/
-├── .bmad/
-│   ├── agents/
-│   │   └── o11y-engineer.agent.yaml    # Main agent file (37 prompts)
-│   └── workflows/
-│       ├── observability-quick-start.yaml
-│       ├── assess-observability-maturity.yaml
-│       ├── configure-collector-pipeline.yaml
-│       ├── build-collector-distro.yaml
-│       ├── create-custom-semconv.yaml
-│       ├── validate-semantic-conventions.yaml
-│       ├── setup-dynatrace.yaml
-│       ├── create-dynatrace-dashboard.yaml
-│       ├── create-dynatrace-workflow.yaml
-│       ├── build-project-dashboard.yaml
-│       ├── build-diagnostic-notebook.yaml
-│       ├── suggest-dynatrace-workflows.yaml
-│       └── validate-observability.yaml
-├── docs/
-│   └── installation.md
+├── .claude-plugin/
+│   └── marketplace.json          # Distribution manifest
+├── skills/
+│   ├── o11y-setup/               # Module setup and configuration
+│   │   ├── SKILL.md
+│   │   ├── scripts/              # Config merge scripts
+│   │   └── assets/
+│   │       ├── module.yaml       # Module identity and config variables
+│   │       └── module-help.csv   # Capability registry
+│   ├── o11y-engineer/            # Main agent skill (28 menu items)
+│   │   ├── SKILL.md
+│   │   ├── customize.toml        # Persona, menu, persistent facts
+│   │   ├── prompts/              # 13 action prompts
+│   │   └── assets/
+│   │       ├── workflows/        # 18 workflow YAML files
+│   │       └── knowledge/        # Dynatrace format reference
+│   ├── o11y-write-ottl/          # OTTL expression helper
+│   │   └── SKILL.md
+│   ├── o11y-generate-epics/      # Epic generation for sprints
+│   │   └── SKILL.md
+│   ├── o11y-instrument-app/      # App instrumentation guidance
+│   │   └── SKILL.md
+│   └── o11y-redact-pii/          # PII redaction configuration
+│       └── SKILL.md
+├── docs/                          # MkDocs documentation
 ├── README.md
 ├── CONTRIBUTING.md
 └── LICENSE
 ```
 
-## Installation Methods
+## Installation
 
-### Method 1: Copy to Existing BMAD Project (Recommended)
+### Custom Module Installation (Recommended)
 
 ```bash
-# Clone the observability agent repository
-git clone https://github.com/henrikrexed/bmad-observability-agent.git
-
-# Navigate to your existing BMAD project
-cd /path/to/your/bmad-project
-
-# Copy the agent
-cp bmad-observability-agent/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
-
-# Copy all workflows
-cp bmad-observability-agent/.bmad/workflows/*.yaml .bmad/workflows/
+# Install via BMad CLI
+npx bmad-method install --custom-source https://github.com/henrikrexed/bmad-observability-agent
 ```
 
-### Method 2: Use as Standalone Project
+The installer will:
+1. Detect the `.claude-plugin/marketplace.json` manifest
+2. List the O11y Engineer module for selection
+3. Install 6 skills to `.claude/skills/`
+4. Run the `o11y-setup` skill to configure your preferences:
+   - Observability backend (Dynatrace, Datadog, New Relic, Grafana Cloud, Self-hosted)
+   - Collector deployment model (DaemonSet, Deployment, Sidecar, Docker, VM)
+   - Primary application language (Java, Python, Node.js, Go, .NET, Mixed)
+   - Artifact output location
+5. Register capabilities in the BMad help system
+
+### Local Installation
 
 ```bash
-# Clone and use directly
+# Clone the repository
 git clone https://github.com/henrikrexed/bmad-observability-agent.git
-cd bmad-observability-agent
 
-# The .bmad directory is ready to use with your AI assistant
-```
-
-### Method 3: Git Submodule (for version tracking)
-
-```bash
-# Add as submodule to your project
-cd /path/to/your/project
-git submodule add https://github.com/henrikrexed/bmad-observability-agent.git .bmad-o11y
-
-# Create symlinks to your .bmad directory
-mkdir -p .bmad/agents .bmad/workflows
-ln -s ../.bmad-o11y/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
-for f in .bmad-o11y/.bmad/workflows/*.yaml; do
-  ln -s "../$f" .bmad/workflows/
-done
+# Install from local path
+npx bmad-method install --custom-source /path/to/bmad-observability-agent
 ```
 
 ## Verify Installation
 
-### Check Files Exist
+### Check Skills Exist
 ```bash
-# Agent file
-ls -la .bmad/agents/o11y-engineer.agent.yaml
-# Should show ~196KB file
-
-# Workflows
-ls -la .bmad/workflows/
-# Should show 10 workflow files
+# All 6 skills should be installed
+ls .claude/skills/o11y-*
+# Should show: o11y-setup, o11y-engineer, o11y-generate-epics,
+#              o11y-instrument-app, o11y-redact-pii, o11y-write-ottl
 ```
 
 ### Test in AI Assistant
 
-In Claude Code or your AI assistant:
 ```
-# Load the agent
-Read the file .bmad/agents/o11y-engineer.agent.yaml and use it as your persona.
+# Invoke the full agent with menu
+/o11y-engineer
 
-# Or reference a specific action
-*quick-start
-*check-quality
-*generate-handoff
+# Or run a specific skill directly
+/o11y-write-ottl
+/o11y-generate-epics
 ```
 
-## Agent Statistics
+## Module Skills
 
-| Metric | Value |
-|--------|-------|
-| Total Prompts | 40 |
-| Menu Commands | 47 |
-| Workflows | 13 |
-| File Size | ~210KB |
-| Lines | ~6,500 |
-
-### Prompt Categories
-
-| Category | Count | Description |
-|----------|-------|-------------|
-| BMAD Collaboration | 4 | Handoff, epics, status, sync |
-| Core Orchestration | 4 | Intent detection, quality, remediation |
-| Instrumentation | 9 | Auto/manual instrumentation, scoring |
-| Weaver (Semconv) | 5 | Docs, code gen, validation |
-| OCB (Collector) | 7 | Build custom collectors |
-| Dynatrace | 11 | dtctl + MCP automation |
+| Skill | Menu Code | Description |
+|-------|-----------|-------------|
+| `o11y-setup` | SO | Install or reconfigure module settings |
+| `o11y-engineer` | OA | Full agent with 28 menu items |
+| `o11y-write-ottl` | WO | Generate OTTL expressions |
+| `o11y-generate-epics` | GE | Create observability epics |
+| `o11y-instrument-app` | IA | Add OpenTelemetry to apps |
+| `o11y-redact-pii` | RP | Configure PII redaction |
 
 ## Optional Dependencies
 
@@ -261,84 +239,57 @@ For **VS Code** (`.vscode/mcp.json` in your project):
 
 ## Updating
 
-### From Git Repository
-
 ```bash
-cd bmad-observability-agent
-git pull origin main
-
-# If using as submodule
-git submodule update --remote
+# Re-run the installer to update to the latest version
+npx bmad-method install --custom-source https://github.com/henrikrexed/bmad-observability-agent
 ```
 
-### Copy Updated Files
-
-```bash
-# Copy updated agent
-cp bmad-observability-agent/.bmad/agents/o11y-engineer.agent.yaml .bmad/agents/
-
-# Copy updated workflows
-cp bmad-observability-agent/.bmad/workflows/*.yaml .bmad/workflows/
-```
+The installer will update skills and re-run setup if the module configuration has changed.
 
 ## Uninstallation
 
+Remove the installed skills:
 ```bash
-# Remove agent
-rm .bmad/agents/o11y-engineer.agent.yaml
-
-# Remove workflows
-rm .bmad/workflows/observability-*.yaml
-rm .bmad/workflows/assess-*.yaml
-rm .bmad/workflows/configure-*.yaml
-rm .bmad/workflows/build-*.yaml
-rm .bmad/workflows/setup-*.yaml
-rm .bmad/workflows/create-*.yaml
-rm .bmad/workflows/validate-*.yaml
-
-# If using submodule
-git submodule deinit .bmad-o11y
-git rm .bmad-o11y
+rm -rf .claude/skills/o11y-*
 ```
+
+Remove module configuration from `_bmad/config.yaml` (delete the `o11y` section).
 
 ## Troubleshooting
 
-### Agent Not Loading
+### Skills Not Loading
 
-1. Check file path is correct:
+1. Check skills are installed:
 ```bash
-cat .bmad/agents/o11y-engineer.agent.yaml | head -20
+ls .claude/skills/o11y-engineer/SKILL.md
 ```
 
-2. Verify YAML syntax:
+2. Verify BMad Method is v6.3+:
 ```bash
-python3 -c "import yaml; yaml.safe_load(open('.bmad/agents/o11y-engineer.agent.yaml'))"
+npx bmad-method --version
+```
+
+### Module Config Missing
+
+Run the setup skill to reconfigure:
+```
+/o11y-setup
 ```
 
 ### Workflows Not Found
 
-1. Check workflows directory:
+The 18 workflow YAML files live inside the agent skill:
 ```bash
-ls .bmad/workflows/*.yaml | wc -l
-# Should return 10
-```
-
-2. Verify workflow references in agent match file names
-
-### Permission Issues
-
-```bash
-chmod 644 .bmad/agents/*.yaml
-chmod 644 .bmad/workflows/*.yaml
+ls .claude/skills/o11y-engineer/assets/workflows/
 ```
 
 ## Next Steps
 
 After installation:
 
-1. **Quick Start** - Run `*quick-start` for new observability setup
-2. **Assessment** - Run `*assess-observability` for existing setups
-3. **Quality Check** - Run `*check-quality` for scoring
-4. **Handoff** - Run `*generate-handoff` for multi-agent collaboration
+1. **Invoke the agent** — Run `/o11y-engineer` to see the full menu
+2. **Quick Start** — Select `QS` for new observability setup
+3. **Assessment** — Select `AM` for existing setups
+4. **Quality Check** — Select `QC` for scoring
 
 See the [Home page](index.md) for full documentation.

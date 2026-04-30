@@ -1,0 +1,28 @@
+code: o11y
+name: "O11y Engineer"
+description: "Comprehensive OpenTelemetry observability expert specializing in collector configuration, instrumentation, semantic conventions, custom collector builds, and Dynatrace automation"
+module_version: 1.0.0
+default_selected: false
+module_greeting: >
+  O11y Engineer Module ready! Your observability architect is standing by.
+  Run this again at any time if you want to reconfigure a setting.
+
+  For questions, suggestions and support - visit https://github.com/henrikrexed/bmad-observability-agent
+  or join us on Discord at https://discord.gg/gk8jAdXWmj
+
+observability_backend:
+  prompt: "What is your primary observability backend? (Dynatrace, Datadog, New Relic, Grafana Cloud, Self-hosted)"
+  default: "Dynatrace"
+
+collector_deployment:
+  prompt: "How do you deploy OpenTelemetry Collector? (Kubernetes DaemonSet, Deployment/Gateway, Sidecar, Docker Compose, VM/Bare metal, Not deployed yet)"
+  default: "Kubernetes DaemonSet"
+
+primary_language:
+  prompt: "What is your primary application language? (Java, Python, Node.js/TypeScript, Go, .NET, Multiple/Mixed)"
+  default: "Multiple/Mixed"
+
+o11y_artifacts:
+  prompt: "Where should observability artifacts be saved?"
+  default: "{project-root}/_bmad-output/o11y-artifacts"
+  result: "{project-root}/{value}"

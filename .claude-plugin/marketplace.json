@@ -1,0 +1,29 @@
+{
+  "name": "o11y",
+  "owner": {
+    "name": "Henrik Rex (@henrikrexed)"
+  },
+  "license": "MIT",
+  "homepage": "https://henrikrexed.github.io/bmad-observability-agent/",
+  "repository": "https://github.com/henrikrexed/bmad-observability-agent",
+  "keywords": ["bmad", "opentelemetry", "observability", "dynatrace", "otel", "instrumentation"],
+  "plugins": [
+    {
+      "name": "o11y",
+      "source": "./skills",
+      "description": "Comprehensive OpenTelemetry observability expert specializing in collector configuration, instrumentation, semantic conventions, custom collector builds, and Dynatrace automation",
+      "version": "1.0.0",
+      "author": {
+        "name": "Henrik Rex (@henrikrexed)"
+      },
+      "skills": [
+        "./o11y-setup",
+        "./o11y-engineer",
+        "./o11y-write-ottl",
+        "./o11y-generate-epics",
+        "./o11y-instrument-app",
+        "./o11y-redact-pii"
+      ]
+    }
+  ]
+}

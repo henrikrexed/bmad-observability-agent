@@ -145,13 +145,7 @@ Add to your AI assistant's MCP configuration:
 
 ### Verify MCP Connection
 
-After configuring, restart your AI assistant and run:
-
-```
-*check-mcp
-```
-
-If MCP is available, you'll see:
+After configuring, restart your AI assistant and verify the MCP connection. If MCP is available, you'll see:
 
 ```
 Dynatrace MCP server is configured and connected.
@@ -164,14 +158,12 @@ Available capabilities:
 
 ### MCP-Powered Commands
 
-| Command | Purpose |
-|---------|---------|
-| `*discover-services` | Find services in Dynatrace |
-| `*discover-metrics` | Find available metrics |
-| `*analyze-logs` | Analyze log patterns |
-| `*build-project-dashboard` | Build dashboard from real metrics |
-| `*build-diagnostic-notebook` | Build troubleshooting notebook |
-| `*suggest-workflows` | Get AI-suggested automations |
+| Menu Code | Purpose |
+|-----------|---------|
+| `PD` | Project Discovery — find services, metrics in Dynatrace |
+| `DB` | Dashboard Builder — build dashboard from real metrics |
+| `SW` | Suggest Workflows — get AI-suggested automations |
+| `DN` | Diagnostic Notebook — build troubleshooting notebook |
 
 ### Required Token Scopes for MCP
 
@@ -188,10 +180,10 @@ Available capabilities:
 
 ## Using the O11y Engineer Command
 
-Run `*setup-dynatrace` to get an interactive guide through the complete setup process:
+Run `SD` (Setup Dynatrace via `/o11y-engineer`) to get an interactive guide through the complete setup process:
 
 ```
-*setup-dynatrace
+SD
 ```
 
 This covers:

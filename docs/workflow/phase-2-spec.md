@@ -1,6 +1,6 @@
 # Phase 2: Observability Spec
 
-**Command:** `*generate-observability-spec`
+**Command:** Generate observability spec (via `/o11y-engineer`)
 
 **Goal:** Define use-case-driven observability specifications that serve as contracts between development and operations teams.
 

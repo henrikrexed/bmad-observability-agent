@@ -1,6 +1,6 @@
 # Phase 3: Collector Configuration
 
-**Command:** `*configure-pipeline`
+**Menu Code:** `CP` (via `/o11y-engineer`)
 
 **Goal:** Design and configure the OpenTelemetry Collector pipeline with correct processor ordering, resource enrichment, PII cleanup, and exporter configuration.
 
