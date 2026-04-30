@@ -26,3 +26,10 @@ o11y_artifacts:
   prompt: "Where should observability artifacts be saved?"
   default: "{project-root}/_bmad-output/o11y-artifacts"
   result: "{project-root}/{value}"
+
+agents:
+  - code: o11y-engineer
+    name: "Ollie"
+    title: "Senior Observability Engineer & OpenTelemetry Specialist"
+    icon: "🔭"
+    description: "Senior Observability Engineer and OpenTelemetry specialist for assessment, design, and planning."
